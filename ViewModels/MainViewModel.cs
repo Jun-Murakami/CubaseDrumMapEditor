@@ -6,11 +6,13 @@ using CubaseDrumMapEditor.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
+using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using System.Linq;
 using System.Xml;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
+using System.Xml.Linq;
 
 namespace CubaseDrumMapEditor.ViewModels;
 
@@ -19,11 +21,13 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         OpenDrumMapCommand = new AsyncRelayCommand(OpenDrumMapAsync);
+        SaveDrumMapCommand = new AsyncRelayCommand(SaveDrumMapAsync);
         MoveUpCommand = new RelayCommand(MoveUp);
         MoveDownCommand = new RelayCommand(MoveDown);
     }
 
     public IAsyncRelayCommand OpenDrumMapCommand { get; }
+    public IAsyncRelayCommand SaveDrumMapCommand { get; }
     public ICommand MoveUpCommand { get; }
     public ICommand MoveDownCommand { get; }
 
@@ -168,9 +172,76 @@ public partial class MainViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                var cdialog = new ContentDialog() { Title = $"Error: {ex.Message}", PrimaryButtonText = "OK" };
+                var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
                 await cdialog.ShowAsync();
                 throw;
+            }
+        }
+    }
+
+    private async Task SaveDrumMapAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Name) || SortedMapList == null || SortedMapList.Count < 127)
+        {
+            return;
+        }
+
+        var dialog = new FilePickerSaveOptions
+        {
+            Title = "Export Cubase DrumMap file",
+            FileTypeChoices = new List<FilePickerFileType>
+                    {new("Cubase DrumMap file (*.drm)") { Patterns = new[] { "*.drm" } },
+                    new("All files (*.*)") { Patterns = new[] { "*" } }}
+        };
+
+        var result = await (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.MainWindow!.StorageProvider.SaveFilePickerAsync(dialog);
+
+        if (result != null)
+        {
+            var selectedFilePath = result.Path.LocalPath;
+            string extension = Path.GetExtension(selectedFilePath);
+            if (string.IsNullOrEmpty(extension))
+            {
+                selectedFilePath += ".drm";
+            }
+
+            try
+            {
+                var drumMap = new XElement("DrumMap");
+
+                // Simple properties
+                drumMap.Add(new XElement("string", new XAttribute("name", "Name"), new XAttribute("value", Name), new XAttribute("wide", "true")));
+
+                // More complex properties
+                var quantize = new XElement("list", new XAttribute("name", "Quantize"), new XAttribute("type", "list"));
+                var quantizeItem = new XElement("item");
+                quantizeItem.Add(new XElement("int", new XAttribute("name", "Grid"), new XAttribute("value", QGrid)));
+                quantizeItem.Add(new XElement("int", new XAttribute("name", "Type"), new XAttribute("value", QType)));
+                quantizeItem.Add(new XElement("float", new XAttribute("name", "Swing"), new XAttribute("value", QSwing)));
+                quantizeItem.Add(new XElement("int", new XAttribute("name", "Legato"), new XAttribute("value", QLegato)));
+                quantize.Add(quantizeItem);
+                drumMap.Add(quantize);
+
+                var outputDevices = new XElement("list", new XAttribute("name", "OutputDevices"), new XAttribute("type", "list"));
+                var outputDevicesItem = new XElement("item");
+                outputDevicesItem.Add(new XElement("string", new XAttribute("name", "DeviceName"), new XAttribute("value", DeviceName!)));
+                outputDevicesItem.Add(new XElement("string", new XAttribute("name", "PortName"), new XAttribute("value", PortName!)));
+                outputDevices.Add(outputDevicesItem);
+                drumMap.Add(outputDevices);
+
+                drumMap.Add(new XElement("int", new XAttribute("name", "Flags"), new XAttribute("value", Flags)));
+
+                // Save to file
+                var doc = new XDocument(drumMap);
+                doc.Save(selectedFilePath);
+
+                var cdialog = new ContentDialog() { Title= "Information", Content = $"Successfully exported DrumMap file.", PrimaryButtonText = "OK" };
+                await cdialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
+                await cdialog.ShowAsync();
             }
         }
     }
@@ -224,7 +295,7 @@ public partial class MainViewModel : ViewModelBase
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             throw;
         }
