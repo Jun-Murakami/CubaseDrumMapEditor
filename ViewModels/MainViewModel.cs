@@ -139,7 +139,6 @@ public partial class MainViewModel : ViewModelBase
         SelectedMapItem = itemToMove;
     }
 
-
     private async Task OpenDrumMapAsync()
     {
         var dialog = new FilePickerOpenOptions
@@ -284,7 +283,7 @@ public partial class MainViewModel : ViewModelBase
                         case "int":
                             if (reader.GetAttribute("name") == "Flags")
                             {
-                                //Flags = reader.GetAttribute("value");
+                                Flags = int.Parse(reader.GetAttribute("value")!);
                             }
                             break;
                     }
