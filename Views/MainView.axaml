@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:CubaseDrumMapEditor.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="CubaseDrumMapEditor.Views.MainView"
+             xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+             xmlns:idd="clr-namespace:Avalonia.Xaml.Interactions.DragAndDrop;assembly=Avalonia.Xaml.Interactions.DragAndDrop"
+			 xmlns:ic="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             x:DataType="vm:MainViewModel">
+  <Design.DataContext>
+    <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+    <vm:MainViewModel />
+  </Design.DataContext>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+		<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="5" Margin="10">
+			<Button Content="Open" Command="{Binding OpenDrumMapCommand}" />
+			<Button Content="New" />
+		</StackPanel>
+		<DataGrid Grid.Row="1" ItemsSource="{Binding SortedMapList}" SelectionMode="Extended" GridLinesVisibility="All" Margin="10">
+			<i:Interaction.Behaviors>
+				<i:BehaviorCollection>
+					<idd:ContextDropBehavior Handler="{Binding DataGridDndByDisplayNote.DndDropHandler}" />
+				</i:BehaviorCollection>
+			</i:Interaction.Behaviors>
+			<DataGrid.Columns>
+				<DataGridTextColumn Header="DisplayNote" Binding="{Binding DisplayNote}" />
+				<DataGridTextColumn Header="Name" Binding="{Binding Name}" />
+				<DataGridTextColumn Header="In Note" Binding="{Binding INote}" />
+				<DataGridTextColumn Header="Out Note" Binding="{Binding ONote}" />
+				<DataGridTextColumn Header="Channel" Binding="{Binding Channel}" />
+				<DataGridTextColumn Header="Length" Binding="{Binding Length}" />
+				<DataGridTextColumn Header="Mute" Binding="{Binding Mute}" />
+				<DataGridTextColumn Header="HeadSymbol" Binding="{Binding HeadSymbol}" />
+				<DataGridTextColumn Header="Voice" Binding="{Binding Voice}" />
+				<DataGridTextColumn Header="PortIndex" Binding="{Binding PortIndex}" />
+				<DataGridTextColumn Header="QuantizeIndex" Binding="{Binding QuantizeIndex}" />
+			</DataGrid.Columns>
+		</DataGrid>
+	</Grid>
+</UserControl>
