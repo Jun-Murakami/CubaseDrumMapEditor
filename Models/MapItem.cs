@@ -16,18 +16,6 @@ namespace CubaseDrumMapEditor.Models
         private string? _name;
         private int _quantizeIndex;
 
-        public int INote
-        {
-            get => _iNote;
-            set => SetProperty(ref _iNote, value);
-        }
-
-        public int ONote
-        {
-            get => _oNote;
-            set => SetProperty(ref _oNote, value);
-        }
-
         public int Channel
         {
             get => _channel;
@@ -44,12 +32,6 @@ namespace CubaseDrumMapEditor.Models
         {
             get => _mute;
             set => SetProperty(ref _mute, value);
-        }
-
-        public int DisplayNote
-        {
-            get => _displayNote;
-            set => SetProperty(ref _displayNote, value);
         }
 
         public int HeadSymbol
@@ -80,6 +62,81 @@ namespace CubaseDrumMapEditor.Models
         {
             get => _quantizeIndex;
             set => SetProperty(ref _quantizeIndex, value);
+        }
+
+        public int DisplayNote
+        {
+            get => _displayNote;
+            set
+            {
+                if (SetProperty(ref _displayNote, value))
+                {
+                    DisplayNoteName = MidiUtility.NoteNumberToName(value);
+                }
+            }
+        }
+
+        public int INote
+        {
+            get => _iNote;
+            set
+            {
+                if (SetProperty(ref _iNote, value))
+                {
+                    INoteName = MidiUtility.NoteNumberToName(value);
+                }
+            }
+        }
+
+        public int ONote
+        {
+            get => _oNote;
+            set
+            {
+                if (SetProperty(ref _oNote, value))
+                {
+                    ONoteName = MidiUtility.NoteNumberToName(value);
+                }
+            }
+        }
+
+        private string? _displayNoteName;
+        public string? DisplayNoteName
+        {
+            get => _displayNoteName;
+            set
+            {
+                if (SetProperty(ref _displayNoteName, value))
+                {
+                    DisplayNote = MidiUtility.NoteNameToNumber(value!);
+                }
+            }
+        }
+
+        private string? _iNoteName;
+        public string? INoteName
+        {
+            get => _iNoteName;
+            set
+            {
+                if (SetProperty(ref _iNoteName, value))
+                {
+                    INote = MidiUtility.NoteNameToNumber(value!);
+                }
+            }
+        }
+
+        private string? _oNoteName;
+        public string? ONoteName
+        {
+            get => _oNoteName;
+            set
+            {
+                if (SetProperty(ref _oNoteName, value))
+                {
+                    ONote = MidiUtility.NoteNameToNumber(value!);
+                }
+            }
         }
     }
 }

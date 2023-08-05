@@ -6,13 +6,11 @@ using CubaseDrumMapEditor.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
-using System.Diagnostics;
-using System.IO;
-using System.Xml.Serialization;
 using CommunityToolkit.Mvvm.Input;
 using System.Linq;
-using System.Xml.Linq;
-using Avalonia.Controls;
+using System.Xml;
+using System.Windows.Input;
+using System.Collections.ObjectModel;
 
 namespace CubaseDrumMapEditor.ViewModels;
 
@@ -21,18 +19,122 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         OpenDrumMapCommand = new AsyncRelayCommand(OpenDrumMapAsync);
+        MoveUpCommand = new RelayCommand(MoveUp);
+        MoveDownCommand = new RelayCommand(MoveDown);
     }
 
     public IAsyncRelayCommand OpenDrumMapCommand { get; }
+    public ICommand MoveUpCommand { get; }
+    public ICommand MoveDownCommand { get; }
 
+    private MapItem? _selectedMapItem;
+    public MapItem? SelectedMapItem
+    {
+        get => _selectedMapItem;
+        set => SetProperty(ref _selectedMapItem, value);
+    }
 
-    private List<MapItem>? _sortedMapList;
+    private string? _name;
+    public string? Name
+    {
+        get => _name;
+        set => SetProperty(ref _name, value);
+    }
 
-    public List<MapItem>? SortedMapList
+    private int _qGrid;
+    public int QGrid
+    {
+        get => _qGrid;
+        set => SetProperty(ref _qGrid, value);
+    }
+
+    private int _qType;
+    public int QType
+    {
+        get => _qType;
+        set => SetProperty(ref _qType, value);
+    }
+
+    private float _qSwing;
+    public float QSwing
+    {
+        get => _qSwing;
+        set => SetProperty(ref _qSwing, value);
+    }
+
+    private int _qLegato;
+    public int QLegato
+    {
+        get => _qLegato;
+        set => SetProperty(ref _qLegato, value);
+    }
+
+    private string? _deviceName;
+    public string? DeviceName
+    {
+        get => _deviceName;
+        set => SetProperty(ref _deviceName, value);
+    }
+
+    private string? _portName;
+    public string? PortName
+    {
+        get => _portName;
+        set => SetProperty(ref _portName, value);
+    }
+
+    private int _flags;
+    public int Flags
+    {
+        get => _flags;
+        set => SetProperty(ref _flags, value);
+    }
+
+    private List<int>? _order;
+    public List<int>? Order
+    {
+        get => _order;
+        set => SetProperty(ref _order, value);
+    }
+
+    private List<MapItem>? _mapList;
+    public List<MapItem>? MapList
+    {
+        get => _mapList;
+        set => SetProperty(ref _mapList, value);
+    }
+
+    private ObservableCollection<MapItem>? _sortedMapList;
+    public ObservableCollection<MapItem>? SortedMapList
     {
         get => _sortedMapList;
         set => SetProperty(ref _sortedMapList, value);
     }
+
+    private void MoveUp()
+    {
+        if (SelectedMapItem == null) return;
+        var selectedIndex = SortedMapList!.IndexOf(SelectedMapItem);
+        if (selectedIndex <= 0) return;
+
+        var itemToMove = SortedMapList[selectedIndex];
+        SortedMapList.RemoveAt(selectedIndex);
+        SortedMapList.Insert(selectedIndex - 1, itemToMove);
+        SelectedMapItem = itemToMove;
+    }
+
+    private void MoveDown()
+    {
+        if (SelectedMapItem == null) return;
+        var selectedIndex = SortedMapList!.IndexOf(SelectedMapItem);
+        if (selectedIndex >= SortedMapList.Count - 1) return;
+
+        var itemToMove = SortedMapList[selectedIndex];
+        SortedMapList.RemoveAt(selectedIndex);
+        SortedMapList.Insert(selectedIndex + 1, itemToMove);
+        SelectedMapItem = itemToMove;
+    }
+
 
     private async Task OpenDrumMapAsync()
     {
@@ -50,71 +152,19 @@ public partial class MainViewModel : ViewModelBase
         {
             try
             {
-                XDocument doc = XDocument.Load(result[0].Path.LocalPath);
+                XmlReaderSettings settings = new XmlReaderSettings();
+                settings.Async = true;
 
-                var drumMapName = doc.Descendants("string")
-                                     .Where(x => (string)x.Attribute("name")! == "Name")
-                                     .Select(x => (string)x.Attribute("value")!)
-                                     .FirstOrDefault();
+                using (XmlReader reader = XmlReader.Create(result[0].Path.LocalPath, settings))
+                {
+                    reader.MoveToContent();
+                    if (reader.Name == "DrumMap")
+                    {
+                        await ParseDrumMapAsync(reader);
+                    }
+                }
 
-                var quantize = doc.Descendants("list")
-                                  .Where(x => (string)x.Attribute("name")! == "Quantize")
-                                  .Select(x => new
-                                  {
-                                      Grid = (int)x.Element("item")!.Element("int")!.Attribute("value")!,
-                                      Type = (int)x.Element("item")!.Elements("int").Skip(1).First().Attribute("value")!,
-                                      Swing = (float)x.Element("item")!.Element("float")!.Attribute("value")!,
-                                      Legato = (int)x.Element("item")!.Elements("int").Skip(2).First().Attribute("value")!
-                                  })
-                                  .FirstOrDefault();
-
-                var mapList = doc.Descendants("list")
-                                 .Where(x => (string)x.Attribute("name")! == "Map")
-                                 .SelectMany(x => x.Elements("item"))
-                                 .Select(x => new MapItem
-                                 {
-                                     INote = (int)x.Elements("int").First().Attribute("value")!,
-                                     ONote = (int)x.Elements("int").Skip(1).First().Attribute("value")!,
-                                     Channel = (int)x.Elements("int").Skip(2).First().Attribute("value")!,
-                                     Length = (float)x.Element("float")!.Attribute("value")!,
-                                     Mute = (int)x.Elements("int").Skip(3).First().Attribute("value")!,
-                                     DisplayNote = (int)x.Elements("int").Skip(4).First().Attribute("value")!,
-                                     HeadSymbol = (int)x.Elements("int").Skip(5).First().Attribute("value")!,
-                                     Voice = (int)x.Elements("int").Skip(6).First().Attribute("value")!,
-                                     PortIndex = (int)x.Elements("int").Skip(7).First().Attribute("value")!,
-                                     Name = (string)x.Element("string")!.Attribute("value")!,
-                                     QuantizeIndex = (int)x.Elements("int").Skip(8).First().Attribute("value")!
-                                 })
-                                 .ToList();
-
-                var orderValues = doc.Descendants("list")
-                                     .Where(x => (string)x.Attribute("name")! == "Order")
-                                     .SelectMany(x => x.Elements("item"))
-                                     .Select(x => (int)x.Attribute("value")!)
-                                     .ToList();
-
-                var outputDevices = doc.Descendants("list")
-                                       .Where(x => (string)x.Attribute("name")! == "OutputDevices")
-                                       .SelectMany(x => x.Elements("item"))
-                                       .Select(x => new
-                                       {
-                                           DeviceName = (string)x.Elements("string").First().Attribute("value")!,
-                                           PortName = (string)x.Elements("string").Skip(1).First().Attribute("value")!
-                                       })
-                                       .ToList();
-
-                var flags = doc.Descendants("int")
-                                .Where(x => (string)x.Attribute("Flags")! == "Name")
-                                .Select(x => (int)x.Attribute("value")!)
-                                .FirstOrDefault();
-
-                // mapListをINoteの値をキーとする辞書に変換
-                var mapDict = mapList.ToDictionary(item => item.DisplayNote, item => item);
-
-                // orderValuesの順番を保持したまま、辞書から順に要素を取り出す
-                var sortedMapList = orderValues.Select(value => mapDict[value]).Cast<MapItem>().ToList();
-
-                SortedMapList = sortedMapList;
+                SortedMapList = new ObservableCollection<MapItem>(MapList!.OrderBy(item => Order!.IndexOf(item.DisplayNote)).ToList());
             }
             catch (Exception ex)
             {
@@ -122,6 +172,278 @@ public partial class MainViewModel : ViewModelBase
                 await cdialog.ShowAsync();
                 throw;
             }
+        }
+    }
+
+    private async Task ParseDrumMapAsync(XmlReader reader)
+    {
+        try
+        {
+            reader.ReadStartElement("DrumMap");
+            while (await reader.ReadAsync())
+            {
+                if (reader.NodeType == XmlNodeType.Element)
+                {
+                    switch (reader.Name)
+                    {
+                        case "string":
+                            if (reader.GetAttribute("name") == "Name")
+                            {
+                                Name = reader.GetAttribute("value");
+                            }
+                            break;
+                        case "list":
+                            if (reader.GetAttribute("name") == "Map")
+                            {
+                                MapList = await ParseMapAsync(reader);
+                            }
+                            else if (reader.GetAttribute("name") == "Quantize")
+                            {
+                                await ParseQuantizeAsync(reader);
+                            }
+                            else if (reader.GetAttribute("name") == "Order")
+                            {
+                                Order = await ParseOrderAsync(reader);
+                            }
+                            else if (reader.GetAttribute("name") == "OutputDevices")
+                            {
+                                await ParseOutputDevicesAsync(reader);
+                            }
+                            break;
+                        case "int":
+                            if (reader.GetAttribute("name") == "Flags")
+                            {
+                                //Flags = reader.GetAttribute("value");
+                            }
+                            break;
+                    }
+                }
+                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "DrumMap")
+                {
+                    return;  // DrumMapエレメントの終了
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+    private async Task<List<MapItem>> ParseMapAsync(XmlReader reader)
+    {
+        try
+        {
+            reader.ReadStartElement("list");
+            List<MapItem> items = new List<MapItem>();
+            while (await reader.ReadAsync())
+            {
+                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
+                {
+                    MapItem item = new MapItem();
+                    reader.ReadStartElement("item");
+                    while (await reader.ReadAsync())
+                    {
+                        if (reader.NodeType == XmlNodeType.Element)
+                        {
+                            switch (reader.Name)
+                            {
+                                case "int":
+                                    if (reader.GetAttribute("name") == "INote")
+                                    {
+                                        item.INote = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "ONote")
+                                    {
+                                        item.ONote = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "Channel")
+                                    {
+                                        item.Channel = int.Parse(reader.GetAttribute("value")!)+1;
+                                    }
+                                    else if (reader.GetAttribute("name") == "Mute")
+                                    {
+                                        item.Mute = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "DisplayNote")
+                                    {
+                                        item.DisplayNote = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "HeadSymbol")
+                                    {
+                                        item.HeadSymbol = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "Voice")
+                                    {
+                                        item.Voice = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "PortIndex")
+                                    {
+                                        item.PortIndex = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "QuantizeIndex")
+                                    {
+                                        item.QuantizeIndex = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    break;
+                                case "float":
+                                    if (reader.GetAttribute("name") == "Length")
+                                    {
+                                        item.Length = float.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    break;
+                                case "string":
+                                    if (reader.GetAttribute("name") == "Name")
+                                    {
+                                        item.Name = reader.GetAttribute("value");
+                                    }
+                                    break;
+                            }
+                        }
+                        else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "item")
+                        {
+                            break;  // Itemエレメントの終了
+                        }
+                    }
+                    items.Add(item);
+                }
+                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
+                {
+                    return items;  // Listエレメントの終了
+                }
+            }
+            return items;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    private async Task<List<int>> ParseOrderAsync(XmlReader reader)
+    {
+        try
+        {
+            reader.ReadStartElement("list");
+            List<int> items = new List<int>();
+            while (await reader.ReadAsync())
+            {
+                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
+                {
+                    items.Add(int.Parse(reader.GetAttribute("value")!));
+                }
+                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
+                {
+                    return items;  // Listエレメントの終了
+                }
+            }
+            return items;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    private async Task ParseQuantizeAsync(XmlReader reader)
+    {
+        try
+        {
+            reader.ReadStartElement("list");
+            while (await reader.ReadAsync())
+            {
+                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
+                {
+                    reader.ReadStartElement("item");
+                    while (reader.Read())
+                    {
+                        if (reader.NodeType == XmlNodeType.Element)
+                        {
+                            switch (reader.Name)
+                            {
+                                case "int":
+                                    if (reader.GetAttribute("name") == "Grid")
+                                    {
+                                        QGrid = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "Type")
+                                    {
+                                        QType = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    else if (reader.GetAttribute("name") == "Legato")
+                                    {
+                                        QLegato = int.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    break;
+                                case "float":
+                                    if (reader.GetAttribute("name") == "Swing")
+                                    {
+                                        QSwing = float.Parse(reader.GetAttribute("value")!);
+                                    }
+                                    break;
+                            }
+                        }
+                        else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "item")
+                        {
+                            return;  // Itemエレメントの終了
+                        }
+                    }
+                }
+                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
+                {
+                    return;  // Listエレメントの終了
+                }
+            }
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    private async Task ParseOutputDevicesAsync(XmlReader reader)
+    {
+        try
+        {
+            reader.ReadStartElement("list");
+            while (await reader.ReadAsync())
+            {
+                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
+                {
+                    reader.ReadStartElement("item");
+                    while (reader.Read())
+                    {
+                        if (reader.NodeType == XmlNodeType.Element)
+                        {
+                            switch (reader.Name)
+                            {
+                                case "string":
+                                    if (reader.GetAttribute("name") == "DeviceName")
+                                    {
+                                        DeviceName = reader.GetAttribute("value")!;
+                                    }
+                                    else if (reader.GetAttribute("name") == "PortName")
+                                    {
+                                        PortName = reader.GetAttribute("value")!;
+                                    }
+                                    break;
+                            }
+                        }
+                        else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "item")
+                        {
+                            return;  // Itemエレメントの終了
+                        }
+                    }
+                }
+                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
+                {
+                    return;  // Listエレメントの終了
+                }
+            }
+        }
+        catch (Exception)
+        {
+            throw;
         }
     }
 }

@@ -5,9 +5,6 @@
              xmlns:vm="clr-namespace:CubaseDrumMapEditor.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CubaseDrumMapEditor.Views.MainView"
-             xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:idd="clr-namespace:Avalonia.Xaml.Interactions.DragAndDrop;assembly=Avalonia.Xaml.Interactions.DragAndDrop"
-			 xmlns:ic="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              x:DataType="vm:MainViewModel">
   <Design.DataContext>
     <!-- This only sets the DataContext for the previewer in an IDE,
@@ -17,23 +14,45 @@
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
-		<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="5" Margin="10">
-			<Button Content="Open" Command="{Binding OpenDrumMapCommand}" />
+		<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="10">
 			<Button Content="New" />
+			<Button Content="Open" Command="{Binding OpenDrumMapCommand}" />
+			<Button Content="Save" />
+			<TextBlock Text="DrumMap Name:" VerticalAlignment="Center" Margin="0,0,-5,0" />
+			<TextBox Width="300" Text="{Binding Name, Mode=TwoWay}" />
 		</StackPanel>
-		<DataGrid Grid.Row="1" ItemsSource="{Binding SortedMapList, Mode=OneWay}" x:Name="DataGrid" Classes="draggable" SelectionMode="Extended" GridLinesVisibility="All" Margin="10">
-			<i:Interaction.Behaviors>
-				<i:BehaviorCollection>
-					<idd:ContextDropBehavior Handler="{Binding DataGridDndByDisplayNote}" />
-				</i:BehaviorCollection>
-			</i:Interaction.Behaviors>
+		<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="10">
+			<Button Content="↑ Up" Command="{Binding MoveUpCommand}" />
+			<Button Content="↓ Down" Command="{Binding MoveDownCommand}" />
+			<TextBlock Text="Q.Grid:" VerticalAlignment="Center" Margin="0,0,-5,0" />
+			<TextBox MinWidth="40" Text="{Binding QGrid, Mode=TwoWay}" />
+			<TextBlock Text="Q.Type:" VerticalAlignment="Center" Margin="0,0,-5,0" />
+			<TextBox MinWidth="40" Text="{Binding QType, Mode=TwoWay}" />
+			<TextBlock Text="Q.Swing:" VerticalAlignment="Center" Margin="0,0,-5,0" />
+			<TextBox MinWidth="40" Text="{Binding QSwing, Mode=TwoWay}" />
+			<TextBlock Text="Q.Legato:" VerticalAlignment="Center" Margin="0,0,-5,0" />
+			<TextBox MinWidth="40" Text="{Binding QLegato, Mode=TwoWay}" />
+			<TextBlock Text="Output DeviceName:" VerticalAlignment="Center" Margin="0,0,-5,0" />
+			<TextBox MinWidth="150" Text="{Binding DeviceName, Mode=TwoWay}" />
+			<TextBlock Text="Output PortName:" VerticalAlignment="Center" Margin="0,0,-5,0" />
+			<TextBox MinWidth="150" Text="{Binding PortName, Mode=TwoWay}" />
+			<TextBlock Text="Flags:" VerticalAlignment="Center" Margin="0,0,-5,0"  />
+			<TextBox MinWidth="40" Text="{Binding Flags, Mode=TwoWay}" />
+		</StackPanel>
+		<DataGrid Grid.Row="2" ItemsSource="{Binding SortedMapList, Mode=TwoWay}"
+				  SelectedItem="{Binding SelectedMapItem}"
+				  SelectionMode="Extended" GridLinesVisibility="All" Margin="10">
 			<DataGrid.Columns>
-				<DataGridTextColumn Header="DisplayNote" Binding="{Binding DisplayNote}" />
+				<DataGridTextColumn Header="DisplayNote" Binding="{Binding DisplayNoteName}" />
+				<DataGridTextColumn Header="#" Binding="{Binding DisplayNote}" />
 				<DataGridTextColumn Header="Name" Binding="{Binding Name}" />
-				<DataGridTextColumn Header="In Note" Binding="{Binding INote}" />
-				<DataGridTextColumn Header="Out Note" Binding="{Binding ONote}" />
+				<DataGridTextColumn Header="InNote" Binding="{Binding INoteName}" />
+				<DataGridTextColumn Header="#" Binding="{Binding INote}" />
+				<DataGridTextColumn Header="OutNote" Binding="{Binding ONoteName}" />
+				<DataGridTextColumn Header="#" Binding="{Binding ONote}" />
 				<DataGridTextColumn Header="Channel" Binding="{Binding Channel}" />
 				<DataGridTextColumn Header="Length" Binding="{Binding Length}" />
 				<DataGridTextColumn Header="Mute" Binding="{Binding Mute}" />
