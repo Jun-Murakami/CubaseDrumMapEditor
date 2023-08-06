@@ -1,12 +1,15 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CubaseDrumMapEditor.App"
+			 xmlns:b="clr-namespace:CubaseDrumMapEditor.Behaviors"
+			 xmlns:m="clr-namespace:CubaseDrumMapEditor.Models"
 			 xmlns:sty="using:FluentAvalonia.Styling"
              RequestedThemeVariant="Dark">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Styles>
 		<sty:FluentAvaloniaTheme PreferUserAccentColor="False" PreferSystemTheme="False" />
+		<StyleInclude Source="DndStyles.axaml" />
 		<Style Selector="DataGrid TextBlock">
 			<Setter Property="FontSize" Value="11" />
 		</Style>
@@ -22,6 +25,10 @@
     </Application.Styles>
 
 	<Application.Resources>
+		<b:DataGridDragHandlder x:Key="DataGridDragHandlder" />
+
+		<b:DataGridDnd x:Key="DataGridDndByDisplayNote" x:TypeArguments="m:MapItem" />
+		
 		<Color x:Key="ButtonBorderBrush">rgb(94, 95, 109)</Color>
 		<Color x:Key="ButtonBorderBrushPointerOver">rgb(94, 95, 109)</Color>
 		<Color x:Key="ButtonBackgroundPointerOver">rgb(64, 65, 79)</Color>
