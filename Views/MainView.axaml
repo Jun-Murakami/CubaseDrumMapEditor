@@ -45,7 +45,8 @@
 			<TextBlock Text="Flags:" VerticalAlignment="Center" Margin="0,0,-5,0"  />
 			<TextBox MinWidth="40" Text="{Binding Flags, Mode=TwoWay}" />
 		</StackPanel>
-		<DataGrid Grid.Row="2" ItemsSource="{Binding SortedMapList, Mode=TwoWay}"
+		<DataGrid Grid.Row="2" ItemsSource="{Binding SortedMapList, Mode=TwoWay}" 
+				  x:Name="DataGrid" Classes="draggable" 
 				  SelectedItem="{Binding SelectedMapItem}" RowHeight="17" CanUserReorderColumns="True"
 				  SelectionMode="Extended" GridLinesVisibility="All" Margin="10">
 			<DataGrid.Columns>
