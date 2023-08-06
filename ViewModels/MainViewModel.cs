@@ -585,4 +585,17 @@ public partial class MainViewModel : ViewModelBase
             }
         }
     }
+
+    public void ProcessDroppedFile(string filePath)
+    {
+        if (Path.GetExtension(filePath) == ".drm")
+        {
+            XDocument doc = XDocument.Load(filePath);
+            LoadDrumMap(doc);
+        }
+        else if (Path.GetExtension(filePath) == ".csv")
+        {
+            ImportDrumMap(filePath);
+        }
+    }
 }

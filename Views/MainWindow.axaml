@@ -8,6 +8,7 @@
 		Width="1250"
         x:Class="CubaseDrumMapEditor.Views.MainWindow"
         WindowStartupLocation="CenterScreen"
+		 DragDrop.AllowDrop="True"
         Icon="/Assets/avalonia-logo.ico"
         Title="Cubase DrumMap Editor">
         <views:MainView />
