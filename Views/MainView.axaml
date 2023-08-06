@@ -18,11 +18,14 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 		<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="10">
-			<Button Content="New" />
+			<Button Content="New" Command="{Binding NewDrumMapCommand}" />
 			<Button Content="Open" Command="{Binding OpenDrumMapCommand}" />
 			<Button Content="Save" Command="{Binding SaveDrumMapCommand}" />
+			<Button Content="Import .csv" Command="{Binding ImportDrumMapCommand}" />
+			<Button Content="Export .csv" Command="{Binding ExportDrumMapCommand}" />
 			<TextBlock Text="DrumMap Name:" VerticalAlignment="Center" Margin="0,0,-5,0" />
 			<TextBox Width="300" Text="{Binding Name, Mode=TwoWay}" />
+			<TextBlock Text="Ctrl+Click on headers to reset the sort." VerticalAlignment="Center" Margin="160,0,0,0" Foreground="rgb(94, 95, 109)"/>
 		</StackPanel>
 		<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="10">
 			<Button Content="↑ Up" Command="{Binding MoveUpCommand}" />
@@ -43,15 +46,15 @@
 			<TextBox MinWidth="40" Text="{Binding Flags, Mode=TwoWay}" />
 		</StackPanel>
 		<DataGrid Grid.Row="2" ItemsSource="{Binding SortedMapList, Mode=TwoWay}"
-				  SelectedItem="{Binding SelectedMapItem}" RowHeight="18"
+				  SelectedItem="{Binding SelectedMapItem}" RowHeight="17" CanUserReorderColumns="True"
 				  SelectionMode="Extended" GridLinesVisibility="All" Margin="10">
 			<DataGrid.Columns>
-				<DataGridTextColumn Header="DisplayNote" Binding="{Binding DisplayNoteName}" IsReadOnly="True" />
+				<DataGridTextColumn Header="Display" Binding="{Binding DisplayNoteName}" IsReadOnly="True" />
 				<DataGridTextColumn Header="#" Binding="{Binding DisplayNote}" IsReadOnly="True" />
 				<DataGridTextColumn Header="Name" Binding="{Binding Name}" />
-				<DataGridTextColumn Header="InNote" Binding="{Binding INoteName}" />
+				<DataGridTextColumn Header="In" Binding="{Binding INoteName}" />
 				<DataGridTextColumn Header="#" Binding="{Binding INote}" />
-				<DataGridTextColumn Header="OutNote" Binding="{Binding ONoteName}" />
+				<DataGridTextColumn Header="Out" Binding="{Binding ONoteName}" />
 				<DataGridTextColumn Header="#" Binding="{Binding ONote}" />
 				<DataGridTextColumn Header="Channel" Binding="{Binding Channel}" />
 				<DataGridTextColumn Header="Length" Binding="{Binding Length}" />

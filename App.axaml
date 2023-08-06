@@ -6,11 +6,9 @@
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Styles>
-		<!--<FluentTheme />-->
 		<sty:FluentAvaloniaTheme PreferUserAccentColor="False" PreferSystemTheme="False" />
-		<!--<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>-->
 		<Style Selector="DataGrid TextBlock">
-			<Setter Property="FontSize" Value="12" />
+			<Setter Property="FontSize" Value="11" />
 		</Style>
 		<Style Selector="Button">
 			<Setter Property="BorderThickness" Value="1" />

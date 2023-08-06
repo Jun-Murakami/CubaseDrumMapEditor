@@ -7,6 +7,6 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="CubaseDrumMapEditor.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
-        Title="CubaseDrumMapEditor">
+        Title="Cubase DrumMap Editor">
         <views:MainView />
 </Window>

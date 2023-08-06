@@ -13,6 +13,14 @@ using System.Xml;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
 using System.Xml.Linq;
+using System.Diagnostics;
+using Avalonia.Platform;
+using CsvHelper;
+using System.Globalization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Threading.Channels;
+using System.Threading;
+using CsvHelper.Configuration;
 
 namespace CubaseDrumMapEditor.ViewModels;
 
@@ -20,14 +28,22 @@ public partial class MainViewModel : ViewModelBase
 {
     public MainViewModel()
     {
+        NewDrumMapCommand = new AsyncRelayCommand(NewDrumMapAsync);
         OpenDrumMapCommand = new AsyncRelayCommand(OpenDrumMapAsync);
         SaveDrumMapCommand = new AsyncRelayCommand(SaveDrumMapAsync);
+
+        ImportDrumMapCommand = new AsyncRelayCommand(ImportDrumMapAsync);
+        ExportDrumMapCommand = new AsyncRelayCommand(ExportDrumMapAsync);
+
         MoveUpCommand = new RelayCommand(MoveUp);
         MoveDownCommand = new RelayCommand(MoveDown);
     }
 
+    public IAsyncRelayCommand NewDrumMapCommand { get; }
     public IAsyncRelayCommand OpenDrumMapCommand { get; }
     public IAsyncRelayCommand SaveDrumMapCommand { get; }
+    public IAsyncRelayCommand ImportDrumMapCommand { get; }
+    public IAsyncRelayCommand ExportDrumMapCommand { get; }
     public ICommand MoveUpCommand { get; }
     public ICommand MoveDownCommand { get; }
 
@@ -139,6 +155,21 @@ public partial class MainViewModel : ViewModelBase
         SelectedMapItem = itemToMove;
     }
 
+    private async Task NewDrumMapAsync()
+    {
+        try
+        {
+            XDocument doc = XDocument.Load(AssetLoader.Open(new Uri("avares://CubaseDrumMapEditor/Assets/EmptyMap.drm")));
+            LoadDrumMap(doc);
+        }
+        catch (Exception ex)
+        {
+            var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
+            await cdialog.ShowAsync();
+            throw;
+        }
+    }
+
     private async Task OpenDrumMapAsync()
     {
         var dialog = new FilePickerOpenOptions
@@ -155,19 +186,8 @@ public partial class MainViewModel : ViewModelBase
         {
             try
             {
-                XmlReaderSettings settings = new XmlReaderSettings();
-                settings.Async = true;
-
-                using (XmlReader reader = XmlReader.Create(result[0].Path.LocalPath, settings))
-                {
-                    reader.MoveToContent();
-                    if (reader.Name == "DrumMap")
-                    {
-                        await ParseDrumMapAsync(reader);
-                    }
-                }
-
-                SortedMapList = new ObservableCollection<MapItem>(MapList!.OrderBy(item => Order!.IndexOf(item.DisplayNote)).ToList());
+                XDocument doc = XDocument.Load(result[0].Path.LocalPath);
+                LoadDrumMap(doc);
             }
             catch (Exception ex)
             {
@@ -176,6 +196,89 @@ public partial class MainViewModel : ViewModelBase
                 throw;
             }
         }
+    }
+
+    private void LoadDrumMap(XDocument doc)
+    {
+        Name = doc.Descendants("string")
+                     .Where(x => (string)x.Attribute("name")! == "Name")
+                     .Select(x => (string)x.Attribute("value")!)
+                     .FirstOrDefault();
+
+        var quantize = doc.Descendants("list")
+                          .Where(x => (string)x.Attribute("name")! == "Quantize")
+                          .Select(x => new
+                          {
+                              Grid = (int)x.Element("item")!.Element("int")!.Attribute("value")!,
+                              Type = (int)x.Element("item")!.Elements("int").Skip(1).First().Attribute("value")!,
+                              Swing = (float)x.Element("item")!.Element("float")!.Attribute("value")!,
+                              Legato = (int)x.Element("item")!.Elements("int").Skip(2).First().Attribute("value")!
+                          })
+                          .FirstOrDefault();
+
+        QGrid = quantize!.Grid;
+        QType = quantize!.Type;
+        QSwing = quantize!.Swing;
+        QLegato = quantize!.Legato;
+
+        List<int> orderValues = doc.Descendants("list")
+                            .Where(x => (string)x.Attribute("name")! == "Order")
+                            .SelectMany(x => x.Elements("item"))
+                            .Select(x => (int)x.Attribute("value")!)
+                            .ToList();
+
+        List<MapItem> mapList = doc.Descendants("list")
+                                .Where(x => (string)x.Attribute("name")! == "Map")
+                                .SelectMany(x => x.Elements("item"))
+                                .Select((x, i) =>
+                                {
+                                    var item = new MapItem(
+                                        (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "INote")?.Attribute("value")!,
+                                        (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "ONote")?.Attribute("value")!,
+                                        (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "DisplayNote")?.Attribute("value")!
+                                    );
+
+                                    item.INote = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "INote")?.Attribute("value")!;
+                                    item.ONote = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "ONote")?.Attribute("value")!;
+                                    item.Channel = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "Channel")?.Attribute("value")! + 1;
+                                    item.Length = (float)x.Elements("float").FirstOrDefault(e => e.Attribute("name")?.Value == "Length")?.Attribute("value")!;
+                                    item.Mute = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "Mute")?.Attribute("value")!;
+                                    item.DisplayNote = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "DisplayNote")?.Attribute("value")!;
+                                    item.HeadSymbol = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "HeadSymbol")?.Attribute("value")!;
+                                    item.Voice = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "Voice")?.Attribute("value")!;
+                                    item.PortIndex = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "PortIndex")?.Attribute("value")!;
+                                    item.Name = (string)x.Elements("string").FirstOrDefault(e => e.Attribute("name")?.Value == "Name")?.Attribute("value")!;
+                                    item.QuantizeIndex = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "QuantizeIndex")?.Attribute("value")!;
+
+
+                                    return item;
+                                })
+                                .ToList();
+
+
+        var outputDevices = doc.Descendants("list")
+                               .Where(x => (string)x.Attribute("name")! == "OutputDevices")
+                               .SelectMany(x => x.Elements("item"))
+                               .Select(x => new
+                               {
+                                   DeviceName = (string)x.Elements("string").First().Attribute("value")!,
+                                   PortName = (string)x.Elements("string").Skip(1).First().Attribute("value")!
+                               })
+                               .FirstOrDefault();
+
+        DeviceName = outputDevices!.DeviceName;
+        PortName = outputDevices!.PortName;
+
+        Flags = doc.Descendants("int")
+                        .Where(x => (string)x.Attribute("Flags")! == "Name")
+                        .Select(x => (int)x.Attribute("value")!)
+                        .FirstOrDefault();
+
+        var sortedMapList = mapList
+                            .OrderBy(item => orderValues.IndexOf(item.DisplayNote))
+                            .ToList();
+
+        SortedMapList = new ObservableCollection<MapItem>(sortedMapList);
     }
 
     private async Task SaveDrumMapAsync()
@@ -221,6 +324,36 @@ public partial class MainViewModel : ViewModelBase
                 quantize.Add(quantizeItem);
                 drumMap.Add(quantize);
 
+                // MapList
+                var sortedMapList = new XElement("list", new XAttribute("name", "Map"), new XAttribute("type", "list"));
+                var sortedItems = SortedMapList.OrderBy(i => i.DisplayNote); // Order by DisplayNote
+                foreach (var item in sortedItems)
+                {
+                    var mapItem = new XElement("item");
+                    mapItem.Add(new XElement("int", new XAttribute("name", "INote"), new XAttribute("value", item.INote)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "ONote"), new XAttribute("value", item.ONote)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "Channel"), new XAttribute("value", item.Channel - 1)));
+                    mapItem.Add(new XElement("float", new XAttribute("name", "Length"), new XAttribute("value", item.Length)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "Mute"), new XAttribute("value", item.Mute)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "DisplayNote"), new XAttribute("value", item.DisplayNote)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "HeadSymbol"), new XAttribute("value", item.HeadSymbol)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "Voice"), new XAttribute("value", item.Voice)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "PortIndex"), new XAttribute("value", item.PortIndex)));
+                    mapItem.Add(new XElement("string", new XAttribute("name", "Name"), new XAttribute("value", item.Name ?? ""), new XAttribute("wide", "true")));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "QuantizeIndex"), new XAttribute("value", item.QuantizeIndex)));
+                    sortedMapList.Add(mapItem);
+                }
+                drumMap.Add(sortedMapList);
+
+                // Order
+                var orderList = new XElement("list", new XAttribute("name", "Order"), new XAttribute("type", "int"));
+                foreach (var displayNote in SortedMapList.Select(i => i.DisplayNote))
+                {
+                    orderList.Add(new XElement("item", new XAttribute("value", displayNote)));
+                }
+                drumMap.Add(orderList);
+
+                // outputDevices
                 var outputDevices = new XElement("list", new XAttribute("name", "OutputDevices"), new XAttribute("type", "list"));
                 var outputDevicesItem = new XElement("item");
                 outputDevicesItem.Add(new XElement("string", new XAttribute("name", "DeviceName"), new XAttribute("value", DeviceName!)));
@@ -228,13 +361,14 @@ public partial class MainViewModel : ViewModelBase
                 outputDevices.Add(outputDevicesItem);
                 drumMap.Add(outputDevices);
 
+                // Flags
                 drumMap.Add(new XElement("int", new XAttribute("name", "Flags"), new XAttribute("value", Flags)));
 
                 // Save to file
                 var doc = new XDocument(drumMap);
                 doc.Save(selectedFilePath);
 
-                var cdialog = new ContentDialog() { Title= "Information", Content = $"Successfully exported DrumMap file.", PrimaryButtonText = "OK" };
+                var cdialog = new ContentDialog() { Title = "Information", Content = $"Successfully exported DrumMap file.", PrimaryButtonText = "OK" };
                 await cdialog.ShowAsync();
             }
             catch (Exception ex)
@@ -245,275 +379,152 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private async Task ParseDrumMapAsync(XmlReader reader)
+    private async Task ImportDrumMapAsync()
     {
-        try
+        var dialog = new FilePickerOpenOptions
         {
-            reader.ReadStartElement("DrumMap");
-            while (await reader.ReadAsync())
+            AllowMultiple = false,
+            Title = "Select CSV file",
+            FileTypeFilter = new List<FilePickerFileType>
+                    {new("CSV files (*.csv)") { Patterns = new[] { "*.csv" } },
+                    new("All files (*.*)") { Patterns = new[] { "*" } }}
+        };
+        var result = await (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.MainWindow!.StorageProvider.OpenFilePickerAsync(dialog);
+
+        if (result.Count > 0)
+        {
+            try
             {
-                if (reader.NodeType == XmlNodeType.Element)
+                var config = new CsvConfiguration(CultureInfo.InvariantCulture)
                 {
-                    switch (reader.Name)
+                    HasHeaderRecord = false,  // ヘッダー行を読み飛ばす
+                    HeaderValidated = null,
+                    MissingFieldFound = null
+                };
+
+                Debug.WriteLine(result[0].Path.LocalPath);
+
+                using (var reader = new StreamReader(result[0].Path.LocalPath))
+                using (var csv = new CsvReader(reader, config))
+                {
+                    // 1行目のヘッダーを読み込み
+                    csv.Read();
+
+                    // 2行目を読み込み、各プロパティに割り当て
+                    csv.Read();
+                    Name = csv.GetField<string>(0);
+                    QGrid = csv.GetField<int>(1);
+                    QType = csv.GetField<int>(2);
+                    QSwing = csv.GetField<float>(3);
+                    QLegato = csv.GetField<int>(4);
+                    DeviceName = csv.GetField<string>(5);
+                    PortName = csv.GetField<string>(6);
+                    Flags = csv.GetField<int>(7);
+
+                    // 3行目のヘッダーを読み込み
+                    csv.Read();
+
+                    // 4行目以降を読み込み、MapItemリストに割り当て
+                    var csvMapItems = csv.GetRecords<CsvMapItem>().ToList();
+
+                    // CsvMapItemのリストをループして、各CsvMapItemをMapItemに変換
+                    var mapItems = new List<MapItem>();
+                    foreach (var csvMapItem in csvMapItems)
                     {
-                        case "string":
-                            if (reader.GetAttribute("name") == "Name")
-                            {
-                                Name = reader.GetAttribute("value");
-                            }
-                            break;
-                        case "list":
-                            if (reader.GetAttribute("name") == "Map")
-                            {
-                                MapList = await ParseMapAsync(reader);
-                            }
-                            else if (reader.GetAttribute("name") == "Quantize")
-                            {
-                                await ParseQuantizeAsync(reader);
-                            }
-                            else if (reader.GetAttribute("name") == "Order")
-                            {
-                                Order = await ParseOrderAsync(reader);
-                            }
-                            else if (reader.GetAttribute("name") == "OutputDevices")
-                            {
-                                await ParseOutputDevicesAsync(reader);
-                            }
-                            break;
-                        case "int":
-                            if (reader.GetAttribute("name") == "Flags")
-                            {
-                                Flags = int.Parse(reader.GetAttribute("value")!);
-                            }
-                            break;
+                        var mapItem = new MapItem(MidiUtility.NoteNameToNumber(csvMapItem.INoteName!), MidiUtility.NoteNameToNumber(csvMapItem.ONoteName!), MidiUtility.NoteNameToNumber(csvMapItem.DisplayNoteName!))
+                        {
+                            DisplayNote = MidiUtility.NoteNameToNumber(csvMapItem.DisplayNoteName!),
+                            INote = MidiUtility.NoteNameToNumber(csvMapItem.INoteName!),
+                            ONote = MidiUtility.NoteNameToNumber(csvMapItem.ONoteName!),
+                            Channel = csvMapItem.Channel,
+                            Length = csvMapItem.Length,
+                            Mute = csvMapItem.Mute,
+                            HeadSymbol = csvMapItem.HeadSymbol,
+                            Voice = csvMapItem.Voice,
+                            PortIndex = csvMapItem.PortIndex,
+                            QuantizeIndex = csvMapItem.QuantizeIndex
+                        };
+
+                        mapItems.Add(mapItem);
                     }
+                    SortedMapList = new ObservableCollection<MapItem>(mapItems);
                 }
-                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "DrumMap")
-                {
-                    return;  // DrumMapエレメントの終了
-                }
+
             }
-        }
-        catch (Exception)
-        {
-            throw;
+            catch (Exception ex)
+            {
+                var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
+                await cdialog.ShowAsync();
+                throw;
+            }
         }
     }
 
-    private async Task<List<MapItem>> ParseMapAsync(XmlReader reader)
+    private async Task ExportDrumMapAsync()
     {
-        try
+        if (string.IsNullOrWhiteSpace(Name) || SortedMapList == null || SortedMapList.Count < 127)
         {
-            reader.ReadStartElement("list");
-            List<MapItem> items = new List<MapItem>();
-            while (await reader.ReadAsync())
-            {
-                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
-                {
-                    MapItem item = new MapItem();
-                    reader.ReadStartElement("item");
-                    while (await reader.ReadAsync())
-                    {
-                        if (reader.NodeType == XmlNodeType.Element)
-                        {
-                            switch (reader.Name)
-                            {
-                                case "int":
-                                    if (reader.GetAttribute("name") == "INote")
-                                    {
-                                        item.INote = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "ONote")
-                                    {
-                                        item.ONote = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "Channel")
-                                    {
-                                        item.Channel = int.Parse(reader.GetAttribute("value")!)+1;
-                                    }
-                                    else if (reader.GetAttribute("name") == "Mute")
-                                    {
-                                        item.Mute = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "DisplayNote")
-                                    {
-                                        item.DisplayNote = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "HeadSymbol")
-                                    {
-                                        item.HeadSymbol = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "Voice")
-                                    {
-                                        item.Voice = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "PortIndex")
-                                    {
-                                        item.PortIndex = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "QuantizeIndex")
-                                    {
-                                        item.QuantizeIndex = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    break;
-                                case "float":
-                                    if (reader.GetAttribute("name") == "Length")
-                                    {
-                                        item.Length = float.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    break;
-                                case "string":
-                                    if (reader.GetAttribute("name") == "Name")
-                                    {
-                                        item.Name = reader.GetAttribute("value");
-                                    }
-                                    break;
-                            }
-                        }
-                        else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "item")
-                        {
-                            break;  // Itemエレメントの終了
-                        }
-                    }
-                    items.Add(item);
-                }
-                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
-                {
-                    return items;  // Listエレメントの終了
-                }
-            }
-            return items;
+            return;
         }
-        catch (Exception)
-        {
-            throw;
-        }
-    }
 
-    private async Task<List<int>> ParseOrderAsync(XmlReader reader)
-    {
-        try
+        var dialog = new FilePickerSaveOptions
         {
-            reader.ReadStartElement("list");
-            List<int> items = new List<int>();
-            while (await reader.ReadAsync())
-            {
-                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
-                {
-                    items.Add(int.Parse(reader.GetAttribute("value")!));
-                }
-                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
-                {
-                    return items;  // Listエレメントの終了
-                }
-            }
-            return items;
-        }
-        catch (Exception)
-        {
-            throw;
-        }
-    }
+            Title = "Export CSV file",
+            FileTypeChoices = new List<FilePickerFileType>
+                    {new("CSV file (*.csv)") { Patterns = new[] { "*.csv" } },
+                    new("All files (*.*)") { Patterns = new[] { "*" } }}
+        };
 
-    private async Task ParseQuantizeAsync(XmlReader reader)
-    {
-        try
-        {
-            reader.ReadStartElement("list");
-            while (await reader.ReadAsync())
-            {
-                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
-                {
-                    reader.ReadStartElement("item");
-                    while (reader.Read())
-                    {
-                        if (reader.NodeType == XmlNodeType.Element)
-                        {
-                            switch (reader.Name)
-                            {
-                                case "int":
-                                    if (reader.GetAttribute("name") == "Grid")
-                                    {
-                                        QGrid = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "Type")
-                                    {
-                                        QType = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    else if (reader.GetAttribute("name") == "Legato")
-                                    {
-                                        QLegato = int.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    break;
-                                case "float":
-                                    if (reader.GetAttribute("name") == "Swing")
-                                    {
-                                        QSwing = float.Parse(reader.GetAttribute("value")!);
-                                    }
-                                    break;
-                            }
-                        }
-                        else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "item")
-                        {
-                            return;  // Itemエレメントの終了
-                        }
-                    }
-                }
-                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
-                {
-                    return;  // Listエレメントの終了
-                }
-            }
-        }
-        catch (Exception)
-        {
-            throw;
-        }
-    }
+        var result = await (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.MainWindow!.StorageProvider.SaveFilePickerAsync(dialog);
 
-    private async Task ParseOutputDevicesAsync(XmlReader reader)
-    {
-        try
+        if (result != null)
         {
-            reader.ReadStartElement("list");
-            while (await reader.ReadAsync())
+            var selectedFilePath = result.Path.LocalPath;
+            string extension = Path.GetExtension(selectedFilePath);
+            if (string.IsNullOrEmpty(extension))
             {
-                if (reader.NodeType == XmlNodeType.Element && reader.Name == "item")
-                {
-                    reader.ReadStartElement("item");
-                    while (reader.Read())
-                    {
-                        if (reader.NodeType == XmlNodeType.Element)
-                        {
-                            switch (reader.Name)
-                            {
-                                case "string":
-                                    if (reader.GetAttribute("name") == "DeviceName")
-                                    {
-                                        DeviceName = reader.GetAttribute("value")!;
-                                    }
-                                    else if (reader.GetAttribute("name") == "PortName")
-                                    {
-                                        PortName = reader.GetAttribute("value")!;
-                                    }
-                                    break;
-                            }
-                        }
-                        else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "item")
-                        {
-                            return;  // Itemエレメントの終了
-                        }
-                    }
-                }
-                else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "list")
-                {
-                    return;  // Listエレメントの終了
-                }
+                selectedFilePath += ".csv";
             }
-        }
-        catch (Exception)
-        {
-            throw;
+
+            try
+            {
+                using (var writer = new StreamWriter(selectedFilePath))
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    // Write header
+                    csv.WriteHeader<DrumMapHeader>();
+                    csv.NextRecord();
+
+                    // Write values
+                    var header = new DrumMapHeader
+                    {
+                        Name = Name,
+                        QGrid = QGrid,
+                        QType = QType,
+                        QSwing = QSwing,
+                        QLegato = QLegato,
+                        DeviceName = DeviceName,
+                        PortName = PortName,
+                        Flags = Flags
+                    };
+                    csv.WriteRecord(header);
+                    csv.NextRecord();
+
+                    csv.WriteHeader<DrumMapItemsHeader>();
+                    csv.NextRecord();
+
+                    // Write MapItem
+                    csv.WriteRecords(SortedMapList);
+                }
+
+                var cdialog = new ContentDialog() { Title = "Information", Content = $"Successfully exported CSV file.\n\n*Note:\n1.Do not edit the DisplayNote column (First column).\n2.Do not rearrange the order of columns.\n3.Do not delete or add rows.", PrimaryButtonText = "OK" };
+                await cdialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
+                await cdialog.ShowAsync();
+            }
         }
     }
 }
