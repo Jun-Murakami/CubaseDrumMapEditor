@@ -10,6 +10,9 @@
 		<Style Selector="DataGrid TextBlock">
 			<Setter Property="FontSize" Value="11" />
 		</Style>
+		<Style Selector="DataGrid TextBox">
+			<Setter Property="FontSize" Value="11" />
+		</Style>
 		<Style Selector="Button">
 			<Setter Property="BorderThickness" Value="1" />
 		</Style>

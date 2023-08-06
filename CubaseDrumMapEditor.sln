@@ -5,8 +5,6 @@ VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CubaseDrumMapEditor", "CubaseDrumMapEditor.csproj", "{CC7CD036-7AF9-4279-8D1E-DABD466AC1E8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CubaseDrumMapEditor.Desktop", "..\CubaseDrumMapEditor.Desktop\CubaseDrumMapEditor.Desktop.csproj", "{C6B1F88B-D6D3-4B84-BAED-12120EB81848}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{CC7CD036-7AF9-4279-8D1E-DABD466AC1E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC7CD036-7AF9-4279-8D1E-DABD466AC1E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC7CD036-7AF9-4279-8D1E-DABD466AC1E8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C6B1F88B-D6D3-4B84-BAED-12120EB81848}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C6B1F88B-D6D3-4B84-BAED-12120EB81848}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C6B1F88B-D6D3-4B84-BAED-12120EB81848}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C6B1F88B-D6D3-4B84-BAED-12120EB81848}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
