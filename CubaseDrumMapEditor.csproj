@@ -3,24 +3,25 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <OutputType>WinExe</OutputType>
     <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
   </PropertyGroup>
 
+	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+		<OutputType>WinExe</OutputType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
   
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+	  <Content Include="avalonia-logo.ico" />
   </ItemGroup>
 
   
   <ItemGroup>
     <None Remove="avalonia-logo.ico" />
-  </ItemGroup>
-
-  
-  <ItemGroup>
-    <Content Include="Assets\avalonia-logo.ico" />
-    <Content Include="avalonia-logo.ico" />
   </ItemGroup>
 
   <ItemGroup>
