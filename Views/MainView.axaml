@@ -25,7 +25,7 @@
 			<Button Content="Export .csv" Command="{Binding ExportDrumMapCommand}" />
 			<TextBlock Text="DrumMap Name:" VerticalAlignment="Center" Margin="0,0,-5,0" />
 			<TextBox Width="300" Text="{Binding Name, Mode=TwoWay}" />
-			<TextBlock Text="Ctrl+Click on headers to reset the sort." VerticalAlignment="Center" Margin="160,0,0,0" Foreground="rgb(94, 95, 109)"/>
+			<TextBlock Text="*Ctrl+Click on headers to reset the sort." VerticalAlignment="Center" Margin="155,0,0,0" Foreground="rgb(94, 95, 109)"/>
 		</StackPanel>
 		<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="10">
 			<Button Content="↑ Up" Command="{Binding MoveUpCommand}" />
