@@ -9,3 +9,6 @@ MacOSとWindowsで利用可能.
 ### 特徴
 - .csvのインポートとエクスポートに対応し、ほかのソフトウェアで編集可能(エクセルなど)。
 - ソフトウェアの複数同時起動が可能。
+
+For more information (Japanese)
+https://note.com/junmurakami/n/n13650982fc7f
