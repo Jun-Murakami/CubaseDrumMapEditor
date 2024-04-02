@@ -5,6 +5,8 @@
         <LangVersion>latest</LangVersion>
         <PublishSingleFile>true</PublishSingleFile>
         <SelfContained>true</SelfContained>
+        <RuntimeIdentifiers>win-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
+        <UseAppHost>true</UseAppHost>
         <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
     </PropertyGroup>
     <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
