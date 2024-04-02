@@ -1,29 +1,19 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CubaseDrumMapEditor.App"
-			 xmlns:sty="using:FluentAvalonia.Styling"
+             xmlns:sty="using:FluentAvalonia.Styling"
              RequestedThemeVariant="Dark">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
-
+    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
     <Application.Styles>
-		<sty:FluentAvaloniaTheme PreferUserAccentColor="False" PreferSystemTheme="False" />
-		<Style Selector="DataGrid TextBlock">
-			<Setter Property="FontSize" Value="11" />
-		</Style>
-		<Style Selector="DataGrid TextBox">
-			<Setter Property="FontSize" Value="11" />
-		</Style>
-		<Style Selector="Button">
-			<Setter Property="BorderThickness" Value="1" />
-		</Style>
-		<Style Selector="Button:pointerover">
-			<Setter Property="BorderThickness" Value="1" />
-		</Style>
+        <sty:FluentAvaloniaTheme PreferUserAccentColor="False"
+                                 PreferSystemTheme="False" />
+        <Style Selector="DataGrid TextBlock">
+            <Setter Property="FontSize"
+                    Value="11" />
+        </Style>
+        <Style Selector="DataGrid TextBox">
+            <Setter Property="FontSize"
+                    Value="11" />
+        </Style>
     </Application.Styles>
-
-	<Application.Resources>
-		<Color x:Key="ButtonBorderBrush">rgb(94, 95, 109)</Color>
-		<Color x:Key="ButtonBorderBrushPointerOver">rgb(94, 95, 109)</Color>
-		<Color x:Key="ButtonBackgroundPointerOver">rgb(64, 65, 79)</Color>
-	</Application.Resources>
 </Application>
