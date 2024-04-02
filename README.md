@@ -1,13 +1,14 @@
 # CubaseDrumMapEditor
-A simple drum map editor for Cubase. Available for MacOS and Windows.
-
+A simple drum map editor for Cubase. Available for MacOS and Windows.  
+Cubaseç”¨ã®ã‚·ãƒ³ãƒ—ãƒ«ãªãƒ‰ãƒ©ãƒ ãƒãƒƒãƒ—ã‚¨ãƒ‡ã‚£ã‚¿ãƒ¼ã§ã™ã€‚
+MacOSã¨Windowsã§åˆ©ç”¨å¯èƒ½.  
+<img width="954" alt="ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ã‚·ãƒ§ãƒƒãƒˆ 2023-08-07 23 56 51" src="https://github.com/Jun-Murakami/CubaseDrumMapEditor/assets/126404131/f98dbef8-856d-4171-8356-77c5bd0cc037">
 ### Features
 - Supports .csv import and export for editing in other software (e.g. Excel).
 - Multiple simultaneous software launches are possible.
-----
-Cubase—p‚ÌƒVƒ“ƒvƒ‹‚Èƒhƒ‰ƒ€ƒ}ƒbƒvƒGƒfƒBƒ^[‚Å‚·B
-MacOS‚ÆWindows‚Å—˜—p‰Â”\.
+### ç‰¹å¾´
+- .csvã®ã‚¤ãƒ³ãƒãƒ¼ãƒˆã¨ã‚¨ã‚¯ã‚¹ãƒãƒ¼ãƒˆã«å¯¾å¿œã—ã€ã»ã‹ã®ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢ã§ç·¨é›†å¯èƒ½(ã‚¨ã‚¯ã‚»ãƒ«ãªã©)ã€‚
+- ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢ã®è¤‡æ•°åŒæ™‚èµ·å‹•ãŒå¯èƒ½ã€‚
 
-### “Á’¥
-- .csv‚ÌƒCƒ“ƒ|[ƒg‚ÆƒGƒNƒXƒ|[ƒg‚É‘Î‰‚µA‚Ù‚©‚Ìƒ\ƒtƒgƒEƒFƒA‚Å•ÒW‰Â”\(ƒGƒNƒZƒ‹‚È‚Ç)B
-- ƒ\ƒtƒgƒEƒFƒA‚Ì•¡”“¯‹N“®‚ª‰Â”\B
+For more information (Japanese)
+https://note.com/junmurakami/n/n13650982fc7f
