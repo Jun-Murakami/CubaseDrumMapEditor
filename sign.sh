@@ -1,15 +1,10 @@
-#!/bin/bash
-APP_NAME="CubaseDrumMapEditor.app"
-ENTITLEMENTS="MyAppEntitlements.entitlements"
-SIGNING_IDENTITY="Developer ID Application: Jun Takahashi (AQDS3A93CQ)" # matches Keychain Access certificate name
+#!/usr/bin/env zsh
 
-find "$APP_NAME/Contents/MacOS/"|while read fname; do
-    if [[ -f $fname ]]; then
-        echo "[INFO] Signing $fname"
-        codesign --force --timestamp --options=runtime --entitlements "$ENTITLEMENTS" --sign "$SIGNING_IDENTITY" "$fname"
-    fi
-done
+set -euo pipefail
 
-echo "[INFO] Signing app file"
+SCRIPT_DIR="${0:a:h}"
+cd "$SCRIPT_DIR"
 
-codesign --force --timestamp --options=runtime --entitlements "$ENTITLEMENTS" --sign "$SIGNING_IDENTITY" "$APP_NAME"
+print -- "[INFO] Signing is now handled by build.sh. Delegating with SKIP_BUILD=1 SKIP_NOTARIZE=1."
+
+SKIP_BUILD=1 SKIP_NOTARIZE=1 ./build.sh "$@"
