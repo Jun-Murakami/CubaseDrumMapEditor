@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Avalonia;
 using FluentAvalonia.UI.Controls;
@@ -18,6 +18,7 @@ using CsvHelper;
 using System.Globalization;
 using CsvHelper.Configuration;
 using System.ComponentModel;
+using System.Text;
 using Avalonia.Controls;
 
 namespace CubaseDrumMapEditor.ViewModels;
@@ -129,54 +130,6 @@ public partial class MainViewModel : ViewModelBase
         set => SetProperty(ref _sortedMapList, value);
     }
 
-    private bool _isUpdating;
-
-    private async void HandleMapItemPropertyChangedAsync(object? sender, PropertyChangedEventArgs e)
-    {
-        if (_isUpdating) return; // 無限ループを防ぐためのフラグチェック
-
-        try
-        {
-            if (sender is MapItem changedItem) // sender を MapItem としてキャスト
-            {
-                _isUpdating = true; // フラグを設定
-
-                if (e.PropertyName == nameof(MapItem.DisplayNote))
-                {
-                    changedItem.DisplayNoteName = MidiUtility.NoteNumberToName(changedItem.DisplayNote);
-                }
-                else if (e.PropertyName == nameof(MapItem.DisplayNoteName))
-                {
-                    changedItem.DisplayNote = MidiUtility.NoteNameToNumber(changedItem.DisplayNoteName!);
-                }
-                else if (e.PropertyName == nameof(MapItem.INote))
-                {
-                    changedItem.INoteName = MidiUtility.NoteNumberToName(changedItem.INote);
-                }
-                else if (e.PropertyName == nameof(MapItem.INoteName))
-                {
-                    changedItem.INote = MidiUtility.NoteNameToNumber(changedItem.INoteName!);
-                }
-                else if (e.PropertyName == nameof(MapItem.ONote))
-                {
-                    changedItem.ONoteName = MidiUtility.NoteNumberToName(changedItem.ONote);
-                }
-                else if (e.PropertyName == nameof(MapItem.ONoteName))
-                {
-                    changedItem.ONote = MidiUtility.NoteNameToNumber(changedItem.ONoteName!);
-                }
-
-                _isUpdating = false; // フラグをリセット
-            }
-        }
-        catch (Exception ex)
-        {
-            var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
-            await cdialog.ShowAsync();
-        }
-    }
-
-
     private void MoveUp()
     {
         if (SelectedMapItem == null) return;
@@ -244,86 +197,122 @@ public partial class MainViewModel : ViewModelBase
 
     private void LoadDrumMap(XDocument doc)
     {
-        _isUpdating = true;
 
         Name = doc.Descendants("string")
-                     .Where(x => (string)x.Attribute("name")! == "Name")
-                     .Select(x => (string)x.Attribute("value")!)
-                     .FirstOrDefault();
+                     .Where(x => GetStringValue(x, "name") == "Name")
+                     .Select(x => GetStringValue(x, "value", ""))
+                     .FirstOrDefault() ?? "";
 
         var quantize = doc.Descendants("list")
-                          .Where(x => (string)x.Attribute("name")! == "Quantize")
+                          .Where(x => GetStringValue(x, "name") == "Quantize")
                           .Select(x => new
                           {
-                              Grid = (int)x.Element("item")!.Element("int")!.Attribute("value")!,
-                              Type = (int)x.Element("item")!.Elements("int").Skip(1).First().Attribute("value")!,
-                              Swing = (float)x.Element("item")!.Element("float")!.Attribute("value")!,
-                              Legato = (int)x.Element("item")!.Elements("int").Skip(2).First().Attribute("value")!
+                              Grid = GetIntValue(x.Element("item")?.Element("int"), "value", 4),
+                              Type = GetIntValue(x.Element("item")?.Elements("int").Skip(1).FirstOrDefault(), "value", 0),
+                              Swing = GetFloatValue(x.Element("item")?.Element("float"), "value", 0.0f),
+                              Legato = GetIntValue(x.Element("item")?.Elements("int").Skip(2).FirstOrDefault(), "value", 50)
                           })
                           .FirstOrDefault();
 
-        QGrid = quantize!.Grid;
-        QType = quantize!.Type;
-        QSwing = quantize!.Swing;
-        QLegato = quantize!.Legato;
+        QGrid = quantize?.Grid ?? 4;
+        QType = quantize?.Type ?? 0;
+        QSwing = quantize?.Swing ?? 0.0f;
+        QLegato = quantize?.Legato ?? 50;
 
         List<int> orderValues = doc.Descendants("list")
-                            .Where(x => (string)x.Attribute("name")! == "Order")
+                            .Where(x => GetStringValue(x, "name") == "Order")
                             .SelectMany(x => x.Elements("item"))
-                            .Select(x => (int)x.Attribute("value")!)
+                            .Select(x => GetIntValue(x, "value", 0))
                             .ToList();
         List<MapItem> mapList = doc.Descendants("list")
-                                .Where(x => (string)x.Attribute("name")! == "Map")
+                                .Where(x => GetStringValue(x, "name") == "Map")
                                 .SelectMany(x => x.Elements("item"))
                                 .Select((x, i) =>
                                 {
                                     var item = new MapItem();
-                                    item.PropertyChanged += HandleMapItemPropertyChangedAsync;
 
-                                    item.DisplayNote = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "DisplayNote")?.Attribute("value")!;
-                                    item.DisplayNoteName = MidiUtility.NoteNumberToName((int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "DisplayNote")?.Attribute("value")!);
-                                    item.INote = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "INote")?.Attribute("value")!;
-                                    item.INoteName = MidiUtility.NoteNumberToName((int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "INote")?.Attribute("value")!);
-                                    item.ONote = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "ONote")?.Attribute("value")!;
-                                    item.ONoteName = MidiUtility.NoteNumberToName((int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "ONote")?.Attribute("value")!);
-                                    item.Channel = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "Channel")?.Attribute("value")! + 1;
-                                    item.Length = (float)x.Elements("float").FirstOrDefault(e => e.Attribute("name")?.Value == "Length")?.Attribute("value")!;
-                                    item.Mute = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "Mute")?.Attribute("value")!;
-                                    item.HeadSymbol = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "HeadSymbol")?.Attribute("value")!;
-                                    item.Voice = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "Voice")?.Attribute("value")!;
-                                    item.PortIndex = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "PortIndex")?.Attribute("value")!;
-                                    item.Name = (string)x.Elements("string").FirstOrDefault(e => e.Attribute("name")?.Value == "Name")?.Attribute("value")!;
-                                    item.QuantizeIndex = (int)x.Elements("int").FirstOrDefault(e => e.Attribute("name")?.Value == "QuantizeIndex")?.Attribute("value")!;
+                                    // Pitch: 配列のインデックス（0-127）をPitchとして設定
+                                    item.Pitch = i;
+                                    
+                                    // DisplayNote: XMLから読み込み（安全なパース）
+                                    item.DisplayNote = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "DisplayNote"), "value", 0);
+                                    item.DisplayNoteName = MidiUtility.NoteNumberToName(item.DisplayNote);
+                                    item.DisplayNoteNumber = item.DisplayNote.ToString();
+                                    
+                                    // ドラムサウンド名
+                                    item.Name = GetStringValue(x.Elements("string").FirstOrDefault(e => GetStringValue(e, "name") == "Name"), "value", "");
+                                    
+                                    // Snap: デフォルト値を設定
+                                    item.Snap = "1/16";
+                                    
+                                    // Mute
+                                    item.Mute = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "Mute"), "value", 0);
+                                    
+                                    // I-Note
+                                    item.INote = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "INote"), "value", 0);
+                                    item.INoteName = MidiUtility.NoteNumberToName(item.INote);
+                                    item.INoteNumber = item.INote.ToString();
+                                    
+                                    // O-Note
+                                    item.ONote = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "ONote"), "value", 0);
+                                    item.ONoteName = MidiUtility.NoteNumberToName(item.ONote);
+                                    item.ONoteNumber = item.ONote.ToString();
+                                    
+                                    // Channel
+                                    item.Channel = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "Channel"), "value", 0) + 1;
+                                    
+                                    // Output: デフォルト値を設定
+                                    item.Output = "Track";
+                                    
+                                    // Length
+                                    item.Length = GetFloatValue(x.Elements("float").FirstOrDefault(e => GetStringValue(e, "name") == "Length"), "value", 200.0f);
+                                    
+                                    // HeadSymbol
+                                    item.HeadSymbol = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "HeadSymbol"), "value", 0);
+                                    
+                                    // Voice
+                                    item.Voice = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "Voice"), "value", 0);
+                                    
+                                    // PortIndex
+                                    item.PortIndex = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "PortIndex"), "value", 0);
+                                    
+                                    // QuantizeIndex
+                                    item.QuantizeIndex = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "QuantizeIndex"), "value", 0);
+                                    
+                                    // NoteheadSet
+                                    item.NoteheadSet = GetIntValue(x.Elements("int").FirstOrDefault(e => GetStringValue(e, "name") == "NoteheadSet"), "value", 0);
+                                    
+                                    // InstrumentEntityID
+                                    item.InstrumentEntityId = GetStringValue(x.Elements("string").FirstOrDefault(e => GetStringValue(e, "name") == "InstrumentEntityID"), "value", "");
+                                    
+                                    // TechniqueEntityID
+                                    item.TechniqueEntityId = GetStringValue(x.Elements("string").FirstOrDefault(e => GetStringValue(e, "name") == "TechniqueEntityID"), "value", "");
 
                                     return item;
                                 })
                                 .ToList();
 
         var outputDevices = doc.Descendants("list")
-                               .Where(x => (string)x.Attribute("name")! == "OutputDevices")
+                               .Where(x => GetStringValue(x, "name") == "OutputDevices")
                                .SelectMany(x => x.Elements("item"))
                                .Select(x => new
                                {
-                                   DeviceName = (string)x.Elements("string").First().Attribute("value")!,
-                                   PortName = (string)x.Elements("string").Skip(1).First().Attribute("value")!
+                                   DeviceName = GetStringValue(x.Elements("string").FirstOrDefault(), "value", "Default Device"),
+                                   PortName = GetStringValue(x.Elements("string").Skip(1).FirstOrDefault(), "value", "Default Port")
                                })
                                .FirstOrDefault();
 
-        DeviceName = outputDevices!.DeviceName;
-        PortName = outputDevices!.PortName;
+        DeviceName = outputDevices?.DeviceName ?? "Default Device";
+        PortName = outputDevices?.PortName ?? "Default Port";
 
-        Flags = doc.Descendants("int")
-                        .Where(x => (string)x.Attribute("Flags")! == "Name")
-                        .Select(x => (int)x.Attribute("value")!)
-                        .FirstOrDefault();
+        Flags = GetIntValue(doc.Descendants("int").FirstOrDefault(x => GetStringValue(x, "name") == "Flags"), "value", 0);
 
+        // Orderリストに基づいてソート（Pitchベース）
         var sortedMapList = mapList
-                            .OrderBy(item => orderValues.IndexOf(item.DisplayNote))
+                            .OrderBy(item => orderValues.IndexOf(item.Pitch))
                             .ToList();
 
         SortedMapList = new ObservableCollection<MapItem>(sortedMapList);
-
-        _isUpdating = false;
     }
 
     private async Task SaveDrumMapAsync()
@@ -369,9 +358,9 @@ public partial class MainViewModel : ViewModelBase
                 quantize.Add(quantizeItem);
                 drumMap.Add(quantize);
 
-                // MapList
+                // MapList: Pitch順（0-127）で保存
                 var sortedMapList = new XElement("list", new XAttribute("name", "Map"), new XAttribute("type", "list"));
-                var sortedItems = SortedMapList.OrderBy(i => i.DisplayNote); // Order by DisplayNote
+                var sortedItems = SortedMapList.OrderBy(i => i.Pitch); // Order by Pitch
                 foreach (var item in sortedItems)
                 {
                     var mapItem = new XElement("item");
@@ -386,15 +375,18 @@ public partial class MainViewModel : ViewModelBase
                     mapItem.Add(new XElement("int", new XAttribute("name", "PortIndex"), new XAttribute("value", item.PortIndex)));
                     mapItem.Add(new XElement("string", new XAttribute("name", "Name"), new XAttribute("value", item.Name ?? ""), new XAttribute("wide", "true")));
                     mapItem.Add(new XElement("int", new XAttribute("name", "QuantizeIndex"), new XAttribute("value", item.QuantizeIndex)));
+                    mapItem.Add(new XElement("int", new XAttribute("name", "NoteheadSet"), new XAttribute("value", item.NoteheadSet)));
+                    mapItem.Add(new XElement("string", new XAttribute("name", "InstrumentEntityID"), new XAttribute("value", item.InstrumentEntityId ?? "")));
+                    mapItem.Add(new XElement("string", new XAttribute("name", "TechniqueEntityID"), new XAttribute("value", item.TechniqueEntityId ?? "")));
                     sortedMapList.Add(mapItem);
                 }
                 drumMap.Add(sortedMapList);
 
-                // Order
+                // Order: Pitchベースで保存
                 var orderList = new XElement("list", new XAttribute("name", "Order"), new XAttribute("type", "int"));
-                foreach (var displayNote in SortedMapList.Select(i => i.DisplayNote))
+                foreach (var pitch in SortedMapList.Select(i => i.Pitch))
                 {
-                    orderList.Add(new XElement("item", new XAttribute("value", displayNote)));
+                    orderList.Add(new XElement("item", new XAttribute("value", pitch)));
                 }
                 drumMap.Add(orderList);
 
@@ -437,8 +429,6 @@ public partial class MainViewModel : ViewModelBase
 
         var result = await (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.MainWindow!.StorageProvider.OpenFilePickerAsync(dialog);
 
-        _isUpdating = true;
-
         if (result.Count > 0)
         {
             try
@@ -447,25 +437,37 @@ public partial class MainViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                _isUpdating = false;
                 var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
                 await cdialog.ShowAsync();
             }
         }
-
-        _isUpdating = false;
     }
 
     public void ImportDrumMap(string localPath)
     {
+        string fileContent;
+        try
+        {
+            using var stream = new FileStream(localPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            fileContent = reader.ReadToEnd();
+        }
+        catch (IOException ex)
+        {
+            throw new IOException($"Failed to read CSV file. Close other applications that might be locking it and try again.\n{localPath}", ex);
+        }
+
+        var delimiter = DetectCsvDelimiter(fileContent);
+
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
-            HasHeaderRecord = false,  // ヘッダー行を読み飛ばす
+            HasHeaderRecord = false,
             HeaderValidated = null,
-            MissingFieldFound = null
+            MissingFieldFound = null,
+            Delimiter = delimiter
         };
 
-        using (var reader = new StreamReader(localPath))
+        using (var reader = new StringReader(fileContent))
         using (var csv = new CsvReader(reader, config))
         {
             // 1行目のヘッダーを読み込み
@@ -482,42 +484,169 @@ public partial class MainViewModel : ViewModelBase
             PortName = csv.GetField<string>(6);
             Flags = csv.GetField<int>(7);
 
-            // 3行目のヘッダーを読み込み
+            // 3行目のヘッダーを手動で読み込み
             csv.Read();
+            var headerRow = new string[20]; // 十分なサイズを確保
+            for (int i = 0; i < headerRow.Length; i++)
+            {
+                try
+                {
+                    headerRow[i] = csv.GetField<string>(i) ?? "";
+                }
+                catch
+                {
+                    break; // フィールドが存在しない場合は終了
+                }
+            }
+            
+            // ヘッダーに基づいてフィールドインデックスを取得
+            var fieldIndices = new Dictionary<string, int>();
+            for (int i = 0; i < headerRow.Length; i++)
+            {
+                if (!string.IsNullOrEmpty(headerRow[i]))
+                {
+                    fieldIndices[headerRow[i]] = i;
+                }
+            }
 
-            // 4行目以降を読み込み、MapItemリストに割り当て
-            var csvMapItems = csv.GetRecords<CsvMapItem>().ToList();
-
-            // CsvMapItemのリストをループして、各CsvMapItemをMapItemに変換
+            // 4行目以降を読み込み、動的にMapItemリストに変換
             var mapItems = new List<MapItem>();
-            foreach (var csvMapItem in csvMapItems)
+            int rowIndex = 0;
+            
+            while (csv.Read())
             {
                 var mapItem = new MapItem()
                 {
-                    DisplayNote = MidiUtility.NoteNameToNumber(csvMapItem.DisplayNoteName!),
-                    DisplayNoteName = csvMapItem.DisplayNoteName!,
-                    Name = csvMapItem.Name,
-                    INote = MidiUtility.NoteNameToNumber(csvMapItem.INoteName!),
-                    INoteName = csvMapItem.INoteName,
-                    ONote = MidiUtility.NoteNameToNumber(csvMapItem.ONoteName!),
-                    ONoteName = csvMapItem.ONoteName!,
-                    Channel = csvMapItem.Channel,
-                    Length = csvMapItem.Length,
-                    Mute = csvMapItem.Mute,
-                    HeadSymbol = csvMapItem.HeadSymbol,
-                    Voice = csvMapItem.Voice,
-                    PortIndex = csvMapItem.PortIndex,
-                    QuantizeIndex = csvMapItem.QuantizeIndex
+                    // Pitch: 配列のインデックス（0-127）をPitchとして設定
+                    Pitch = rowIndex,
+                    
+                    // 各フィールドを動的に読み込み（存在しない場合はデフォルト値）
+                    DisplayNote = GetFieldValue(csv, fieldIndices, "DisplayNoteName", s => MidiUtility.TryParseNoteInput(s ?? "", out int displayNote) ? displayNote : 0),
+                    DisplayNoteName = GetFieldValue(csv, fieldIndices, "DisplayNoteName", s => s ?? MidiUtility.NoteNumberToName(0)),
+                    
+                    Name = GetFieldValue(csv, fieldIndices, "Name", s => s),
+                    
+                    Snap = GetFieldValue(csv, fieldIndices, "Snap", s => s ?? "1/16"),
+                    
+                    Mute = GetFieldValue(csv, fieldIndices, "Mute", s => int.TryParse(s, out int mute) ? mute : 0),
+                    
+                    INote = GetFieldValue(csv, fieldIndices, "INoteName", s => MidiUtility.TryParseNoteInput(s ?? "", out int iNote) ? iNote : 0),
+                    INoteName = GetFieldValue(csv, fieldIndices, "INoteName", s => s ?? MidiUtility.NoteNumberToName(0)),
+                    
+                    ONote = GetFieldValue(csv, fieldIndices, "ONoteName", s => MidiUtility.TryParseNoteInput(s ?? "", out int oNote) ? oNote : 0),
+                    ONoteName = GetFieldValue(csv, fieldIndices, "ONoteName", s => s ?? MidiUtility.NoteNumberToName(0)),
+                    
+                    Channel = GetFieldValue(csv, fieldIndices, "Channel", s => int.TryParse(s, out int channel) ? channel : 1),
+                    
+                    Output = GetFieldValue(csv, fieldIndices, "Output", s => s ?? "Track"),
+                    
+                    HeadSymbol = GetFieldValue(csv, fieldIndices, "HeadSymbol", s => int.TryParse(s, out int headSymbol) ? headSymbol : 0),
+                    
+                    Voice = GetFieldValue(csv, fieldIndices, "Voice", s => int.TryParse(s, out int voice) ? voice : 0),
+                    
+                    InstrumentEntityId = GetFieldValue(csv, fieldIndices, "InstrumentEntityId", s => s),
+                    
+                    TechniqueEntityId = GetFieldValue(csv, fieldIndices, "TechniqueEntityId", s => s),
+                    
+                    // 内部項目
+                    Length = GetFieldValue(csv, fieldIndices, "Length", s => float.TryParse(s, out float length) ? length : 0.0f),
+                    PortIndex = GetFieldValue(csv, fieldIndices, "PortIndex", s => int.TryParse(s, out int portIndex) ? portIndex : 0),
+                    QuantizeIndex = GetFieldValue(csv, fieldIndices, "QuantizeIndex", s => int.TryParse(s, out int quantizeIndex) ? quantizeIndex : 0),
+                    NoteheadSet = GetFieldValue(csv, fieldIndices, "NoteheadSet", s => int.TryParse(s, out int noteheadSet) ? noteheadSet : 0)
                 };
 
-                mapItem.PropertyChanged += HandleMapItemPropertyChangedAsync;
-
                 mapItems.Add(mapItem);
+                rowIndex++;
             }
             SortedMapList = new ObservableCollection<MapItem>(mapItems);
         }
     }
 
+    // ヘルパーメソッド：フィールド値を安全に取得
+    private static T GetFieldValue<T>(CsvReader csv, Dictionary<string, int> fieldIndices, string fieldName, Func<string?, T> converter, T defaultValue = default(T))
+    {
+        if (fieldIndices.TryGetValue(fieldName, out int index))
+        {
+            try
+            {
+                var value = csv.GetField<string>(index);
+                return converter(value);
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    // 安全なXMLパース用ヘルパーメソッド
+    private static string GetStringValue(XElement? element, string attributeName, string defaultValue = "")
+    {
+        if (element?.Attribute(attributeName)?.Value != null)
+        {
+            return element.Attribute(attributeName)!.Value;
+        }
+        return defaultValue;
+    }
+
+    private static int GetIntValue(XElement? element, string attributeName, int defaultValue = 0)
+    {
+        if (element?.Attribute(attributeName)?.Value != null)
+        {
+            if (int.TryParse(element.Attribute(attributeName)!.Value, out int result))
+            {
+                return result;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static float GetFloatValue(XElement? element, string attributeName, float defaultValue = 0.0f)
+    {
+        if (element?.Attribute(attributeName)?.Value != null)
+        {
+            if (float.TryParse(element.Attribute(attributeName)!.Value, out float result))
+            {
+                return result;
+            }
+        }
+        return defaultValue;
+    }
+
+    private static string DetectCsvDelimiter(string content)
+    {
+        var candidates = new[] { ',', ';', '\t' };
+        var lines = content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries);
+
+        var bestDelimiter = ',';
+        var bestScore = -1;
+
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            foreach (var candidate in candidates)
+            {
+                var score = line.Count(ch => ch == candidate);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestDelimiter = candidate;
+                }
+            }
+
+            if (bestScore > 0)
+            {
+                break; // Stop after finding the first obvious delimiter
+            }
+        }
+
+        return bestScore > 0 ? bestDelimiter.ToString() : ",";
+    }
     private async Task ExportDrumMapAsync()
     {
         if (string.IsNullOrWhiteSpace(Name) || SortedMapList == null || SortedMapList.Count < 127)
@@ -549,33 +678,61 @@ public partial class MainViewModel : ViewModelBase
                 using (var writer = new StreamWriter(selectedFilePath))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
                 {
-                    // Write header
-                    csv.WriteHeader<DrumMapHeader>();
+                    // 1行目: グローバルヘッダー
+                    csv.WriteField("Name");
+                    csv.WriteField("QGrid");
+                    csv.WriteField("QType");
+                    csv.WriteField("QSwing");
+                    csv.WriteField("QLegato");
+                    csv.WriteField("DeviceName");
+                    csv.WriteField("PortName");
+                    csv.WriteField("Flags");
                     csv.NextRecord();
 
-                    // Write values
-                    var header = new DrumMapHeader
+                    // 2行目: グローバル値
+                    csv.WriteField(Name ?? "");
+                    csv.WriteField(QGrid);
+                    csv.WriteField(QType);
+                    csv.WriteField(QSwing);
+                    csv.WriteField(QLegato);
+                    csv.WriteField(DeviceName ?? "");
+                    csv.WriteField(PortName ?? "");
+                    csv.WriteField(Flags);
+                    csv.NextRecord();
+
+                    // 3行目: MapItemヘッダー
+                    csv.WriteHeader<CsvMapItem>();
+                    csv.NextRecord();
+
+                    // 4行目以降: MapItemデータをCsvMapItemに変換して書き出し
+                    foreach (var mapItem in SortedMapList)
                     {
-                        Name = Name,
-                        QGrid = QGrid,
-                        QType = QType,
-                        QSwing = QSwing,
-                        QLegato = QLegato,
-                        DeviceName = DeviceName,
-                        PortName = PortName,
-                        Flags = Flags
-                    };
-                    csv.WriteRecord(header);
-                    csv.NextRecord();
-
-                    csv.WriteHeader<DrumMapItemsHeader>();
-                    csv.NextRecord();
-
-                    // Write MapItem
-                    csv.WriteRecords(SortedMapList);
+                        var csvItem = new CsvMapItem
+                        {
+                            PitchName = mapItem.PitchName,
+                            Name = mapItem.Name,
+                            Snap = mapItem.Snap,
+                            Mute = mapItem.Mute,
+                            INoteName = mapItem.INoteName,
+                            ONoteName = mapItem.ONoteName,
+                            Channel = mapItem.Channel,
+                            Output = mapItem.Output,
+                            DisplayNoteName = mapItem.DisplayNoteName,
+                            HeadSymbol = mapItem.HeadSymbol,
+                            Voice = mapItem.Voice,
+                            InstrumentEntityId = mapItem.InstrumentEntityId,
+                            TechniqueEntityId = mapItem.TechniqueEntityId,
+                            Length = mapItem.Length,
+                            PortIndex = mapItem.PortIndex,
+                            QuantizeIndex = mapItem.QuantizeIndex,
+                            NoteheadSet = mapItem.NoteheadSet
+                        };
+                        csv.WriteRecord(csvItem);
+                        csv.NextRecord();
+                    }
                 }
 
-                var cdialog = new ContentDialog() { Title = "Information", Content = $"Successfully exported CSV file.\n\n*Note:\n1.Do not edit the DisplayNote column (First column).\n2.Do not rearrange the order of columns.\n3.Do not delete or add rows.", PrimaryButtonText = "OK" };
+                var cdialog = new ContentDialog() { Title = "Information", Content = $"Successfully exported CSV file.\n\n*Note:\n1.Do not edit the Pitch column (First column).\n2.Do not rearrange the order of columns.\n3.Do not delete or add rows.", PrimaryButtonText = "OK" };
                 await cdialog.ShowAsync();
             }
             catch (Exception ex)
@@ -599,3 +756,11 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 }
+
+
+
+
+
+
+
+

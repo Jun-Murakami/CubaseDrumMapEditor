@@ -16,32 +16,62 @@ namespace CubaseDrumMapEditor.Models
         // CSVから直接読み込むことができるフィールドのみを含む
         // LibreOffice Calc / OpenOffice Calcで空のセルが空文字列として保存される問題に対応するため、
         // 数値フィールドをnullable型に変更し、カスタムコンバーターを使用
-        public string? DisplayNoteName { get; set; }
+        
+        // Pitch: 絶対的なユニーク値（読み取り専用）
+        public string? PitchName { get; set; }
+        
+        // Drum Sound: ドラムサウンド名
         public string? Name { get; set; }
-        public string? INoteName { get; set; }
-        public string? ONoteName { get; set; }
         
-        [TypeConverter(typeof(NullableIntConverter))]
-        public int Channel { get; set; }
+        // Snap: クオンタイズ設定
+        public string? Snap { get; set; }
         
-        [TypeConverter(typeof(NullableFloatConverter))]
-        public float Length { get; set; }
-        
+        // Mute: ミュート設定
         [TypeConverter(typeof(NullableIntConverter))]
         public int Mute { get; set; }
         
+        // I-Note: 入力音符
+        public string? INoteName { get; set; }
+        
+        // O-Note: 出力音符
+        public string? ONoteName { get; set; }
+        
+        // Channel: MIDIチャンネル
+        [TypeConverter(typeof(NullableIntConverter))]
+        public int Channel { get; set; }
+        
+        // Output: 出力先
+        public string? Output { get; set; }
+        
+        // Display Note: 表示用音符（重複可能）
+        public string? DisplayNoteName { get; set; }
+        
+        // Note Head: 符頭記号
         [TypeConverter(typeof(NullableIntConverter))]
         public int HeadSymbol { get; set; }
         
+        // Voice: 声部
         [TypeConverter(typeof(NullableIntConverter))]
         public int Voice { get; set; }
+        
+        // Instrument Type: 楽器タイプ
+        public string? InstrumentEntityId { get; set; }
+        
+        // Playing Technique: 演奏技法
+        public string? TechniqueEntityId { get; set; }
+        
+        // 内部項目（非表示）
+        [TypeConverter(typeof(NullableFloatConverter))]
+        public float Length { get; set; }
         
         [TypeConverter(typeof(NullableIntConverter))]
         public int PortIndex { get; set; }
         
         [TypeConverter(typeof(NullableIntConverter))]
         public int QuantizeIndex { get; set; }
-
+        
+        [TypeConverter(typeof(NullableIntConverter))]
+        public int NoteheadSet { get; set; }
     }
 
     /// <summary>

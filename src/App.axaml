@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CubaseDrumMapEditor.App"
@@ -14,6 +15,20 @@
         <Style Selector="DataGrid TextBox">
             <Setter Property="FontSize"
                     Value="11" />
+        </Style>
+        <!-- DataGridヘッダーのパディングを調整 -->
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Padding"
+                    Value="4,2,2,2" />
+            <Setter Property="FontSize"
+                    Value="11" />
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Left" />
+        </Style>
+        <!-- DataGridセルのパディングも調整 -->
+        <Style Selector="DataGridCell">
+            <Setter Property="Padding"
+                    Value="4,2,2,2" />
         </Style>
     </Application.Styles>
 </Application>

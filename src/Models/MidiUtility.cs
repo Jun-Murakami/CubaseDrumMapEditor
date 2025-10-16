@@ -16,6 +16,34 @@ namespace CubaseDrumMapEditor.Models
             throw new ArgumentException($"Invalid note name: {noteName}");
         }
 
+        public static bool TryNoteNameToNumber(string noteName, out int noteNumber)
+        {
+            return NoteNameToNumberDict.TryGetValue(noteName, out noteNumber);
+        }
+
+        public static bool TryParseNoteInput(string input, out int noteNumber)
+        {
+            noteNumber = 0;
+            
+            // 空文字列の場合は無効
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+            
+            // 数字の場合は直接変換
+            if (int.TryParse(input, out int number))
+            {
+                if (number >= 0 && number <= 127)
+                {
+                    noteNumber = number;
+                    return true;
+                }
+                return false;
+            }
+            
+            // ノート名の場合は辞書で検索
+            return TryNoteNameToNumber(input, out noteNumber);
+        }
+
         public static string NoteNumberToName(int noteNumber)
         {
             if (NoteNumberToNameDict.TryGetValue(noteNumber, out string? noteName))

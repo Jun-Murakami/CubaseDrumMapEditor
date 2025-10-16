@@ -1,70 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:CubaseDrumMapEditor.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             mc:Ignorable="d"
+             d:DesignWidth="800"
+             d:DesignHeight="450"
              x:Class="CubaseDrumMapEditor.Views.MainView"
              x:DataType="vm:MainViewModel">
-  <Design.DataContext>
-    <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-    <vm:MainViewModel />
-  </Design.DataContext>
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-		<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="10">
-			<Button Content="New" Command="{Binding NewDrumMapCommand}" />
-			<Button Content="Open" Command="{Binding OpenDrumMapCommand}" />
-			<Button Content="Save" Command="{Binding SaveDrumMapCommand}" />
-			<Button Content="Import .csv" Command="{Binding ImportDrumMapCommand}" />
-			<Button Content="Export .csv" Command="{Binding ExportDrumMapCommand}" />
-			<TextBlock Text="DrumMap Name:" VerticalAlignment="Center" Margin="0,0,-5,0" />
-			<TextBox Width="300" Text="{Binding Name, Mode=TwoWay}" />
-			<TextBlock Text="*Ctrl+Click on headers to reset the sort." VerticalAlignment="Center" Margin="155,0,0,0" Foreground="rgb(94, 95, 109)"/>
-		</StackPanel>
-		<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="10">
-			<Button Content="↑ Up" Command="{Binding MoveUpCommand}" />
-			<Button Content="↓ Down" Command="{Binding MoveDownCommand}" />
-			<TextBlock Text="Q.Grid:" VerticalAlignment="Center" Margin="0,0,-5,0" />
-			<TextBox MinWidth="40" Text="{Binding QGrid, Mode=TwoWay}" />
-			<TextBlock Text="Q.Type:" VerticalAlignment="Center" Margin="0,0,-5,0" />
-			<TextBox MinWidth="40" Text="{Binding QType, Mode=TwoWay}" />
-			<TextBlock Text="Q.Swing:" VerticalAlignment="Center" Margin="0,0,-5,0" />
-			<TextBox MinWidth="40" Text="{Binding QSwing, Mode=TwoWay}" />
-			<TextBlock Text="Q.Legato:" VerticalAlignment="Center" Margin="0,0,-5,0" />
-			<TextBox MinWidth="40" Text="{Binding QLegato, Mode=TwoWay}" />
-			<TextBlock Text="Output DeviceName:" VerticalAlignment="Center" Margin="0,0,-5,0" />
-			<TextBox MinWidth="150" Text="{Binding DeviceName, Mode=TwoWay}" />
-			<TextBlock Text="Output PortName:" VerticalAlignment="Center" Margin="0,0,-5,0" />
-			<TextBox MinWidth="150" Text="{Binding PortName, Mode=TwoWay}" />
-			<TextBlock Text="Flags:" VerticalAlignment="Center" Margin="0,0,-5,0"  />
-			<TextBox MinWidth="40" Text="{Binding Flags, Mode=TwoWay}" />
-		</StackPanel>
-		<DataGrid Grid.Row="2" ItemsSource="{Binding SortedMapList, Mode=TwoWay}"
-				  SelectedItem="{Binding SelectedMapItem}" RowHeight="17" CanUserReorderColumns="True"
-				  SelectionMode="Extended" GridLinesVisibility="All" Margin="10">
-			<DataGrid.Columns>
-				<DataGridTextColumn Header="Display" Binding="{Binding DisplayNoteName}" IsReadOnly="True" />
-				<DataGridTextColumn Header="#" Binding="{Binding DisplayNote}" IsReadOnly="True" />
-				<DataGridTextColumn Header="Name" Binding="{Binding Name}" />
-				<DataGridTextColumn Header="In" Binding="{Binding INoteName}" />
-				<DataGridTextColumn Header="#" Binding="{Binding INote}" />
-				<DataGridTextColumn Header="Out" Binding="{Binding ONoteName}" />
-				<DataGridTextColumn Header="#" Binding="{Binding ONote}" />
-				<DataGridTextColumn Header="Channel" Binding="{Binding Channel}" />
-				<DataGridTextColumn Header="Length" Binding="{Binding Length}" />
-				<DataGridTextColumn Header="Mute" Binding="{Binding Mute}" />
-				<DataGridTextColumn Header="HeadSymbol" Binding="{Binding HeadSymbol}" />
-				<DataGridTextColumn Header="Voice" Binding="{Binding Voice}" />
-				<DataGridTextColumn Header="PortIndex" Binding="{Binding PortIndex}" />
-				<DataGridTextColumn Header="QuantizeIndex" Binding="{Binding QuantizeIndex}" />
-			</DataGrid.Columns>
-		</DataGrid>
-
-	</Grid>
+    <Design.DataContext>
+        <!-- Design-time data context only -->
+        <vm:MainViewModel />
+    </Design.DataContext>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    Spacing="10"
+                    Margin="10">
+            <Button Content="New"
+                    Command="{Binding NewDrumMapCommand}" />
+            <Button Content="Open"
+                    Command="{Binding OpenDrumMapCommand}" />
+            <Button Content="Save"
+                    Command="{Binding SaveDrumMapCommand}" />
+            <Button Content="Import .csv"
+                    Command="{Binding ImportDrumMapCommand}" />
+            <Button Content="Export .csv"
+                    Command="{Binding ExportDrumMapCommand}" />
+            <TextBlock Text="DrumMap Name:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox Width="300"
+                     Text="{Binding Name, Mode=TwoWay}" />
+            <TextBlock Text="*Ctrl+Click on headers to reset the sort."
+                       VerticalAlignment="Center"
+                       Margin="155,0,0,0"
+                       Foreground="rgb(94, 95, 109)" />
+        </StackPanel>
+        <!-- Map level configuration -->
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    Spacing="10"
+                    Margin="10">
+            <Button Content="↑Up"
+                    Command="{Binding MoveUpCommand}" />
+            <Button Content="↓Down"
+                    Command="{Binding MoveDownCommand}" />
+            <TextBlock Text="Q.Grid:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox MinWidth="40"
+                     Text="{Binding QGrid, Mode=TwoWay}" />
+            <TextBlock Text="Q.Type:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox MinWidth="40"
+                     Text="{Binding QType, Mode=TwoWay}" />
+            <TextBlock Text="Q.Swing:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox MinWidth="40"
+                     Text="{Binding QSwing, Mode=TwoWay}" />
+            <TextBlock Text="Q.Legato:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox MinWidth="40"
+                     Text="{Binding QLegato, Mode=TwoWay}" />
+            <TextBlock Text="Output DeviceName:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox MinWidth="150"
+                     Text="{Binding DeviceName, Mode=TwoWay}" />
+            <TextBlock Text="Output PortName:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox MinWidth="150"
+                     Text="{Binding PortName, Mode=TwoWay}" />
+            <TextBlock Text="Flags:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,-5,0" />
+            <TextBox MinWidth="40"
+                     Text="{Binding Flags, Mode=TwoWay}" />
+        </StackPanel>
+        <!-- Map items grid -->
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding SortedMapList, Mode=TwoWay}"
+                  SelectedItem="{Binding SelectedMapItem}"
+                  RowHeight="20"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  SelectionMode="Extended"
+                  GridLinesVisibility="All"
+                  Margin="10"
+                  AutoGenerateColumns="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Pitch"
+                                    Binding="{Binding PitchName}"
+                                    IsReadOnly="True"
+                                    Width="63"
+                                    MinWidth="63" />
+                <DataGridTextColumn Header="#"
+                                    Binding="{Binding Pitch}"
+                                    IsReadOnly="True"
+                                    Width="45"
+                                    MinWidth="45" />
+                <DataGridTextColumn Header="Drum Sound"
+                                    Binding="{Binding Name}"
+                                    Width="150"
+                                    MinWidth="100" />
+                <DataGridTextColumn Header="Snap"
+                                    Binding="{Binding Snap}"
+                                    Width="63"
+                                    MinWidth="63" />
+                <DataGridTextColumn Header="Mute"
+                                    Binding="{Binding Mute}"
+                                    Width="65"
+                                    MinWidth="65" />
+                <DataGridTextColumn Header="I-Note"
+                                    Binding="{Binding INoteName, UpdateSourceTrigger=LostFocus}"
+                                    Width="70"
+                                    MinWidth="70" />
+                <DataGridTextColumn Header="#"
+                                    Binding="{Binding INoteNumber, UpdateSourceTrigger=LostFocus}"
+                                    Width="50"
+                                    MinWidth="50" />
+                <DataGridTextColumn Header="O-Note"
+                                    Binding="{Binding ONoteName, UpdateSourceTrigger=LostFocus}"
+                                    Width="77"
+                                    MinWidth="77" />
+                <DataGridTextColumn Header="#"
+                                    Binding="{Binding ONoteNumber, UpdateSourceTrigger=LostFocus}"
+                                    Width="50"
+                                    MinWidth="50" />
+                <DataGridTextColumn Header="Channel"
+                                    Binding="{Binding Channel}"
+                                    Width="78"
+                                    MinWidth="78" />
+                <DataGridTextColumn Header="Output"
+                                    Binding="{Binding Output}"
+                                    Width="77"
+                                    MinWidth="77" />
+                <DataGridTextColumn Header="Display Note"
+                                    Binding="{Binding DisplayNoteName, UpdateSourceTrigger=LostFocus}"
+                                    Width="102"
+                                    MinWidth="102" />
+                <DataGridTextColumn Header="#"
+                                    Binding="{Binding DisplayNoteNumber, UpdateSourceTrigger=LostFocus}"
+                                    Width="50"
+                                    MinWidth="50" />
+                <DataGridTextColumn Header="Note Head"
+                                    Binding="{Binding HeadSymbol}"
+                                    Width="92"
+                                    MinWidth="92" />
+                <DataGridTextColumn Header="NoteheadSet"
+                                    Binding="{Binding NoteheadSet}"
+                                    Width="105"
+                                    MinWidth="105" />
+                <DataGridTextColumn Header="Voice"
+                                    Binding="{Binding Voice}"
+                                    Width="65"
+                                    MinWidth="65" />
+                <DataGridTextColumn Header="Instrument Type"
+                                    Binding="{Binding InstrumentEntityId}"
+                                    Width="120"
+                                    MinWidth="120" />
+                <DataGridTextColumn Header="Playing Technique"
+                                    Binding="{Binding TechniqueEntityId}"
+                                    Width="130"
+                                    MinWidth="130" />
+                <DataGridTextColumn Header="Length"
+                                    Binding="{Binding Length}"
+                                    Width="77"
+                                    MinWidth="77" />
+                <DataGridTextColumn Header="PortIndex"
+                                    Binding="{Binding PortIndex}"
+                                    Width="85"
+                                    MinWidth="85" />
+                <DataGridTextColumn Header="QuantizeIndex"
+                                    Binding="{Binding QuantizeIndex}"
+                                    Width="110"
+                                    MinWidth="110" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
 </UserControl>
