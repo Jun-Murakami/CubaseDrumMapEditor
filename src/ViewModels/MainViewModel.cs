@@ -563,14 +563,14 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // ヘルパーメソッド：フィールド値を安全に取得
-    private static T GetFieldValue<T>(CsvReader csv, Dictionary<string, int> fieldIndices, string fieldName, Func<string?, T> converter, T defaultValue = default(T))
+    private static T GetFieldValue<T>(CsvReader csv, Dictionary<string, int> fieldIndices, string fieldName, Func<string?, T> converter, T defaultValue = default!)
     {
         if (fieldIndices.TryGetValue(fieldName, out int index))
         {
             try
             {
                 var value = csv.GetField<string>(index);
-                return converter(value);
+                return converter(value ?? string.Empty);
             }
             catch
             {
@@ -756,7 +756,6 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 }
-
 
 
 
