@@ -515,10 +515,18 @@ public partial class MainViewModel : ViewModelBase
             
             while (csv.Read())
             {
+                // PitchNameから実際のPitch値を取得
+                var pitchName = GetFieldValue(csv, fieldIndices, "PitchName", s => s ?? "");
+                int pitch = 0;
+                if (!string.IsNullOrEmpty(pitchName))
+                {
+                    MidiUtility.TryParseNoteInput(pitchName, out pitch);
+                }
+                
                 var mapItem = new MapItem()
                 {
-                    // Pitch: 配列のインデックス（0-127）をPitchとして設定
-                    Pitch = rowIndex,
+                    // Pitch: CSVから読み取った実際の値を使用
+                    Pitch = pitch,
                     
                     // 各フィールドを動的に読み込み（存在しない場合はデフォルト値）
                     DisplayNote = GetFieldValue(csv, fieldIndices, "DisplayNoteName", s => MidiUtility.TryParseNoteInput(s ?? "", out int displayNote) ? displayNote : 0),
@@ -558,6 +566,8 @@ public partial class MainViewModel : ViewModelBase
                 mapItems.Add(mapItem);
                 rowIndex++;
             }
+            
+            // CSVの並び順を維持してSortedMapListに設定
             SortedMapList = new ObservableCollection<MapItem>(mapItems);
         }
     }
