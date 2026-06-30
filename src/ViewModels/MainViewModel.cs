@@ -459,6 +459,18 @@ public partial class MainViewModel : ViewModelBase
 
         var delimiter = DetectCsvDelimiter(fileContent);
 
+        // BFD3 exports its key map with a completely different layout
+        // (slotID, slotName, articID, articName, note, noteName). Detect that header and
+        // route to the dedicated importer instead of the app's own CSV parser.
+        var firstLine = fileContent
+            .Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault() ?? string.Empty;
+        if (IsBfdKeyMap(firstLine, delimiter))
+        {
+            ImportBfdKeyMap(fileContent, delimiter, Path.GetFileNameWithoutExtension(localPath));
+            return;
+        }
+
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = false,
@@ -467,6 +479,8 @@ public partial class MainViewModel : ViewModelBase
             Delimiter = delimiter
         };
 
+        try
+        {
         using (var reader = new StringReader(fileContent))
         using (var csv = new CsvReader(reader, config))
         {
@@ -570,6 +584,163 @@ public partial class MainViewModel : ViewModelBase
             // CSVの並び順を維持してSortedMapListに設定
             SortedMapList = new ObservableCollection<MapItem>(mapItems);
         }
+        }
+        catch (Exception ex) when (ex is CsvHelperException or FormatException)
+        {
+            // アプリ独自形式でも BFD 形式でもない CSV。生のパース例外ではなく分かりやすい案内を出す。
+            throw new InvalidDataException(
+                "This CSV file is not in a supported format.\n\n" +
+                "Please import either:\n" +
+                "  - a CSV exported by this app (Export .csv), or\n" +
+                "  - a BFD3 key-map CSV (columns: slotID, slotName, articID, articName, note, noteName).",
+                ex);
+        }
+    }
+
+    // BFD3 のキーマップ書き出しかどうかをヘッダー行で判定する。
+    // BFD の列: slotID, slotName, articID, articName, note, noteName
+    private static bool IsBfdKeyMap(string headerLine, string delimiter)
+    {
+        if (string.IsNullOrWhiteSpace(headerLine))
+        {
+            return false;
+        }
+
+        var columns = headerLine
+            .Split(new[] { delimiter }, StringSplitOptions.None)
+            .Select(c => c.Trim().ToLowerInvariant())
+            .ToHashSet();
+
+        return columns.Contains("slotname")
+            && columns.Contains("articname")
+            && (columns.Contains("note") || columns.Contains("notename"));
+    }
+
+    // BFD3 のキーマップ CSV を Cubase ドラムマップへ変換して取り込む。
+    // 各行は「note=Pitch」「Name="slotName - articName"」へマッピングし、
+    // 未割り当てのピッチは EmptyMap.drm と同じ既定値で埋めて 128 行に揃える。
+    private void ImportBfdKeyMap(string fileContent, string delimiter, string mapName)
+    {
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = false,
+            HeaderValidated = null,
+            MissingFieldFound = null,
+            BadDataFound = null,
+            Delimiter = delimiter,
+            TrimOptions = TrimOptions.Trim
+        };
+
+        // Cubase ドラムマップは常に 128 行（MIDI ピッチ 0-127）。まず既定値で初期化する。
+        var items = new MapItem[128];
+        for (int pitch = 0; pitch < items.Length; pitch++)
+        {
+            items[pitch] = CreateDefaultMapItem(pitch);
+        }
+
+        using (var reader = new StringReader(fileContent))
+        using (var csv = new CsvReader(reader, config))
+        {
+            if (!csv.Read())
+            {
+                return;
+            }
+
+            var header = (csv.Parser.Record ?? Array.Empty<string>())
+                .Select(c => c.Trim())
+                .ToList();
+
+            int IndexOf(string name) =>
+                header.FindIndex(c => string.Equals(c, name, StringComparison.OrdinalIgnoreCase));
+
+            int slotIndex = IndexOf("slotName");
+            int articIndex = IndexOf("articName");
+            int noteIndex = IndexOf("note");
+            int noteNameIndex = IndexOf("noteName");
+
+            while (csv.Read())
+            {
+                var record = csv.Parser.Record;
+                if (record == null)
+                {
+                    continue;
+                }
+
+                string Field(int index) =>
+                    (index >= 0 && index < record.Length) ? record[index].Trim() : string.Empty;
+
+                // ピッチは数値の note を優先し、無ければ noteName から解決する。
+                int pitch = -1;
+                if (noteIndex >= 0 && int.TryParse(Field(noteIndex), out int parsedNote))
+                {
+                    pitch = parsedNote;
+                }
+                else if (noteNameIndex >= 0 && MidiUtility.TryParseNoteInput(Field(noteNameIndex), out int parsedFromName))
+                {
+                    pitch = parsedFromName;
+                }
+
+                if (pitch < 0 || pitch > 127)
+                {
+                    continue;
+                }
+
+                var slot = Field(slotIndex);
+                var artic = Field(articIndex);
+                string name;
+                if (slot.Length > 0 && artic.Length > 0)
+                {
+                    name = $"{slot} - {artic}";
+                }
+                else
+                {
+                    name = slot.Length > 0 ? slot : artic;
+                }
+
+                var item = items[pitch];
+                item.Name = name;
+                item.INote = pitch;
+                item.ONote = pitch;
+                item.DisplayNote = pitch;
+            }
+        }
+
+        // グローバルヘッダーの既定値（EmptyMap.drm に準拠）。マップ名はファイル名から。
+        Name = string.IsNullOrWhiteSpace(mapName) ? "BFD Drum Map" : mapName;
+        QGrid = 4;
+        QType = 0;
+        QSwing = 0f;
+        QLegato = 50;
+        DeviceName = "Default Device";
+        PortName = "Default Port";
+        Flags = 0;
+
+        SortedMapList = new ObservableCollection<MapItem>(items);
+    }
+
+    // EmptyMap.drm の各行の既定値を再現する（XML 上の Channel 9 は UI 表示で 10）。
+    private static MapItem CreateDefaultMapItem(int pitch)
+    {
+        return new MapItem
+        {
+            Pitch = pitch,
+            Name = string.Empty,
+            Snap = "1/16",
+            Output = "Track",
+            INote = pitch,
+            ONote = pitch,
+            DisplayNote = pitch,
+            Channel = 10,
+            Length = 200f,
+            Mute = 0,
+            HeadSymbol = 0,
+            Voice = 0,
+            PortIndex = 0,
+            QuantizeIndex = 0,
+            NoteheadSet = 0,
+            InstrumentEntityId = string.Empty,
+            TechniqueEntityId = string.Empty
+        };
     }
 
     // ヘルパーメソッド：フィールド値を安全に取得
@@ -753,16 +924,31 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    public void ProcessDroppedFile(string filePath)
+    public async void ProcessDroppedFile(string filePath)
     {
-        if (Path.GetExtension(filePath) == ".drm")
+        try
         {
-            XDocument doc = XDocument.Load(filePath);
-            LoadDrumMap(doc);
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            if (extension == ".drm")
+            {
+                XDocument doc = XDocument.Load(filePath);
+                LoadDrumMap(doc);
+            }
+            else if (extension == ".csv")
+            {
+                ImportDrumMap(filePath);
+            }
+            else
+            {
+                var info = new ContentDialog() { Title = "Unsupported file", Content = "Please drop a .drm or .csv file.", PrimaryButtonText = "OK" };
+                await info.ShowAsync();
+            }
         }
-        else if (Path.GetExtension(filePath) == ".csv")
+        catch (Exception ex)
         {
-            ImportDrumMap(filePath);
+            // ドラッグ&ドロップは未捕捉例外がそのままアプリを落とすため、必ずここで受ける。
+            var cdialog = new ContentDialog() { Title = "Error", Content = $"{ex.Message}", PrimaryButtonText = "OK" };
+            await cdialog.ShowAsync();
         }
     }
 }

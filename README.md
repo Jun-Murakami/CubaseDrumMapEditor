@@ -8,11 +8,17 @@ MacOS と Windows で利用可能.
 ### Features
 
 - Supports .csv import and export for editing in other software (e.g. Excel).
+- Imports BFD3 key-map CSV exports directly — just drop in the file BFD3 wrote
+  (columns: `slotID, slotName, articID, articName, note, noteName`); the format is
+  auto-detected and each note is mapped to a `slotName - articName` drum sound.
 - Multiple simultaneous software launches are possible.
 
 ### 特徴
 
 - .csv のインポートとエクスポートに対応し、ほかのソフトウェアで編集可能(エクセルなど)。
+- BFD3 のキーマップ CSV 書き出しを直接インポート可能。BFD3 が出力したファイル
+  （列: `slotID, slotName, articID, articName, note, noteName`）をそのまま読み込むと、
+  形式を自動判別し、各ノートを `slotName - articName` のドラムサウンドへマッピングします。
 - ソフトウェアの複数同時起動が可能。
 
 For more information (Japanese)
